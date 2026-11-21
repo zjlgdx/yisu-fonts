@@ -146,6 +146,16 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   `edges.py` fails when none of `--chars` is drawn, so a mangled list can't
   pass as clean.
 
+- **A shared character drawn with the mainland's part.** `hz_forms.py` catches
+  a Taiwan part where the mainland's belongs, not the other way round: 獾 took
+  `K['雚']` (the mainland's 艹) as its default, so Traditional text got it
+  too. `tools/hz_mainland_parts.py FIRST` lists the round's characters whose
+  default holds a mainland part; draw those with the Taiwan part (`K['雚T']`,
+  `K['离T']`) and add the shared ones to `_SHARED_TW`.
+- **Check only the round's characters at the edges.** `edges.py --batch` with
+  no `--chars` draws every character there is (half an hour a font); pass the
+  batches' own characters.
+
 ## 2. Check the edges, then merge
 
 ```
