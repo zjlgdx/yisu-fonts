@@ -27,6 +27,15 @@ hs = R / 'hanzi_strokes.py'
 text = hs.read_text(encoding='utf-8')
 i = text.index('# Mainland China sets the full-width marks')
 add = '\n\n'.join(Path(b).read_text(encoding='utf-8').strip('\n') for b in batches)
+# A batch that defines a part or character again would quietly replace the
+# one already drawn (0.880 redrew 23 this way): refuse it.
+DEF = re.compile(r"^([KCL])\['([^']+)'\]\s*=", re.M)
+old = set(DEF.findall(text))
+again = [k + "['" + n + "']" for k, n in DEF.findall(add) if (k, n) in old]
+names = DEF.findall(add)
+again += [k + "['" + n + "'] twice" for k, n in set(names) if names.count((k, n)) > 1]
+if again:
+    sys.exit('already defined: ' + ' '.join(again) + ' (tools/hz_dupes.py lists them)')
 hs.write_text(text[:i].rstrip('\n') + '\n\n' + add + '\n\n\n' + text[i:], encoding='utf-8')
 
 bp = R / 'build.py'
