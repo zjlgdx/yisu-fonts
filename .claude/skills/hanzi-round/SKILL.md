@@ -109,6 +109,16 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   write uses that one, and goes in `_SHARED_TW` so Simplified text gets the
   mainland's. `hz_forms.py` catches a Taiwan part with no ZHS form, not a
   mainland part used where Taiwan's belongs: look for `K['x']` where `K['xT']` exists.
+- **Draft only what `hz_todo.py` lists.** A row's Traditional form is often
+  drawn already (rows 5,660–5,829 redrew 23 that were, and the later
+  definition won, moving six glyphs). Take the characters from its output, not
+  from the rows; `merge_round.py` refuses a batch that defines anything again,
+  and `tools/hz_dupes.py BATCHES` lists them.
+- **Stroke counts catch a wrong part.** In `hz_count.py --batch`'s list, look
+  for the batch's own characters: 殇 came out one short because its right side
+  is 𠂉 over 𠃓, not 伤's 力, and 毂 one over because, unlike 轂, it has no 一
+  above 车. A part with the same count hides (昝's 卜 drawn as 人): look the
+  unsure ones up.
 - **The radical is not always on the left.** 媭 is 须 over 女, not 女 beside 须;
   a batch written a family at a time makes this easy to miss. Say each
   character's structure to yourself before `lr()`, and run `tools/hz_count.py
