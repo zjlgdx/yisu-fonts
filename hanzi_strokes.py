@@ -10973,7 +10973,7 @@ C['獒'] = box((K['敖T'], (0, 0, 1000, 600)), (K['犬'], (100, 520, 900, 1000))
 C['獠'] = lr(L['犭'], K['尞'])
 C['獬'] = lr(L['犭'], C['解'])
 C['獴'] = lr(L['犭'], C['蒙'])
-C['獾'] = lr(L['犭'], K['雚'])
+C['獾'] = lr(L['犭'], K['雚T'])
 C['玎'] = lr(L['王'], K['丁'])
 C['玑'] = lr(L['王'], K['几'])
 C['玕'] = lr(L['王'], K['干'])
@@ -11102,7 +11102,7 @@ _SHARED_TW += '必密秘蜜泌瑟祕毖差搓嗟磋蹉嵯鹿麒麓麟麂麋麝�
 # rows to 5999
 _SHARED_TW += '扃掮掾揶搋旒棰槎檎'
 # rows to 6169
-_SHARED_TW += '泐溲漉漭潢澉煸煺熥犍犏狨獒獴'
+_SHARED_TW += '泐溲漉漭潢澉煸煺熥犍犏狨獒獴獾'
 ZHS.update({ch: _mainland(C[ch]) for ch in _SHARED_TW})
 
 # In a column, mainland China sets all seven marks 置于相应文字之下偏右
