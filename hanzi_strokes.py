@@ -11301,13 +11301,9 @@ _SHARED_TW += '必密秘蜜泌瑟祕毖差搓嗟磋蹉嵯鹿麒麓麟麂麋麝�
 # rows to 5999
 _SHARED_TW += '扃掮掾揶搋旒棰槎檎'
 # rows to 6169
-<<<<<<< HEAD
-_SHARED_TW += '泐溲漉漭潢澉煸煺熥犍犏狨獒獴'
+_SHARED_TW += '泐溲漉漭潢澉煸煺熥犍犏狨獒獴獾'
 # rows to 6339
 _SHARED_TW += '璈瓴瓿甏甑瘙瘼癃瞢砹硭碡磲礴笈筇箬篪瓘'
-=======
-_SHARED_TW += '泐溲漉漭潢澉煸煺熥犍犏狨獒獴獾'
->>>>>>> hanzi-6169
 ZHS.update({ch: _mainland(C[ch]) for ch in _SHARED_TW})
 
 # In a column, mainland China sets all seven marks 置于相应文字之下偏右
