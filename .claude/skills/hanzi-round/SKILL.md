@@ -156,6 +156,14 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   no `--chars` draws every character there is (half an hour a font); pass the
   batches' own characters.
 
+- **A family's template puts the radical in the wrong place.** Drafting a whole
+  radical family from one left-right template drew 贳 貰 as 贝 beside 世 (世
+  sits over 贝), 飙 飆 with 风 on the left (猋 is), and gave 痫 癇 the more
+  common 间 間 for 闲 閒. Stroke counts don't catch a part in the wrong
+  place or a look-alike with the same count: look up every character whose
+  radical is not where its family's is, and every part that has a commoner
+  look-alike, before the sheet.
+
 ## 2. Check the edges, then merge
 
 ```
