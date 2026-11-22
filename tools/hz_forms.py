@@ -17,7 +17,10 @@ the part its family shares: 番 and 杈 hold 釆 and 叉 in both scripts.
 Which script has a character: hanzi_order.tsv's columns, and Unihan's kTGH
 (in 通用规范汉字表 at any level, so the mainland writes it too: 著 and 藉 sit
 in the Traditional column of 着's and 借's rows) when work/unihan is there.
-Exits 1 on any problem; check_fonts.py runs it.
+Exits 1 on any problem; check_fonts.py runs it, and merge_round.py with the
+round's batches. A batch's shared character can't have its ZHS form yet (that
+is made from _SHARED_TW when hanzi_strokes loads, before the batch runs), so
+with --batch those are listed to add after the merge, not failed.
 """
 import argparse
 import os
@@ -71,7 +74,7 @@ def mainland_parts(x, out):
     return out
 
 
-bad = []
+bad, owed = [], []
 for ch, v in h.C.items():
     if not han(ch):
         continue
@@ -85,9 +88,13 @@ for ch, v in h.C.items():
     if in_simp and not in_trad:
         bad.append(f'{ch} is Simplified only but draws a Taiwan part')
     elif in_simp:
-        if ch not in h.ZHS:
+        if ch not in h.ZHS and a.batch:
+            owed.append(ch)
+        elif ch not in h.ZHS:
             bad.append(f'{ch} is shared and has a Taiwan part, but no ZHS form')
         elif flatten(h.ZHS[ch]) != mainland:
             bad.append(f"{ch}'s ZHS form is not its drawing with the mainland's parts")
 print(f'  {len(bad)} problems' + (': ' + '; '.join(bad) if bad else ''))
+if owed:
+    print("  shared, with a Taiwan part: after merging, add to _SHARED_TW: " + ''.join(owed))
 sys.exit(1 if bad else 0)
