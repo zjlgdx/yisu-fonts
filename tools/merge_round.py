@@ -36,6 +36,9 @@ names = DEF.findall(add)
 again += [k + "['" + n + "'] twice" for k, n in set(names) if names.count((k, n)) > 1]
 if again:
     sys.exit('already defined: ' + ' '.join(again) + ' (tools/hz_dupes.py lists them)')
+# Each script's own form of every part, before an hour's build finds out.
+if subprocess.run([sys.executable, str(Path(__file__).parent / 'hz_forms.py'), '--batch', ','.join(batches)]).returncode:
+    sys.exit('fix the forms above first (tools/hz_forms.py --batch ...)')
 hs.write_text(text[:i].rstrip('\n') + '\n\n' + add + '\n\n\n' + text[i:], encoding='utf-8')
 
 bp = R / 'build.py'
