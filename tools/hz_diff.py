@@ -35,14 +35,19 @@ DUMP = ('import sys, json, hashlib; sys.path.insert(0, "."); import hanzi_stroke
         'd = lambda v: hashlib.md5(repr(flatten(v)).encode()).hexdigest(); '
         'print(json.dumps({"C": {k: d(v) for k, v in h.C.items()}, "S": {k: d(v) for k, v in h.ZHS.items()}}))')
 
+MAINLAND = ('import sys, runpy; sys.path.insert(0, "tools"); import _repo; h = _repo.load(); h.C.update(h.ZHS); '
+            'sys.argv = ["hz_sheet.py"] + sys.argv[1:]; runpy.run_path("tools/hz_sheet.py", run_name="__main__")')
+
 
 def forms(tree):
     return json.loads(subprocess.run([sys.executable, '-c', DUMP], cwd=tree, check=True, capture_output=True, text=True).stdout)
 
 
 def sheet(tree, out, chars, per, size, mainland):
-    subprocess.run([sys.executable, 'tools/hz_sheet.py', str(out), chars, '--per', str(per), '--size', str(size)]
-                   + (['--mainland'] if mainland else []), cwd=tree, check=True, capture_output=True)
+    argv = ['tools/hz_sheet.py', str(out), chars, '--per', str(per), '--size', str(size)]
+    # the ref's hz_sheet.py may be older than --mainland, so the forms are swapped in before it runs
+    run = [sys.executable, '-c', MAINLAND, *argv[1:]] if mainland else [sys.executable, *argv]
+    subprocess.run(run, cwd=tree, check=True, capture_output=True)
     return Image.open(out).convert('RGB')
 
 
