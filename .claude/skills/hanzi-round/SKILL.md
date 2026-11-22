@@ -259,6 +259,13 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   where the closest strokes are. A form that was already tight is debt
   (`--debt`): it fails only if it gets worse, so old noise cannot hide a new
   defect, which is what happened to every list before it.
+- **A least hides everything above it.** The gate first kept one number a
+  form (its closest pair), so a form whose parts already meet somewhere, as
+  1,727 do, could take a new collision elsewhere unseen. It now also counts
+  the pairs of strokes under 20 apart and fails when there are more; and a
+  form that is in the baseline and no longer drawn fails as gone. Both came
+  from a reviewer on another model reading the gate itself: have the checks
+  reviewed like the drawings.
 - **Green before accept.** `--accept` rewrites the baseline, so it would also
   swallow a regression. Run it only when the gate is green, or when each
   remaining failure is one you can name in the commit message with its
@@ -268,8 +275,10 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   already held them. A new check goes in with a seed that it fails on.
 - **Review what changed, all of it, large.** `hz_diff.py` finds every form
   whose drawing differs from the ref (355 when 41 definitions were touched)
-  and draws twelve to a sheet, before above and after below. The list of what
-  you meant to change is not the list of what changed.
+  and draws twelve to a sheet, before above and after below; the mainland
+  forms that are their own drawings go on the `-s-` sheets, and forms that
+  are gone are named. The list of what you meant to change is not the list
+  of what changed.
 - **The reviewer did not make the change.** Give a fresh agent the sheets and
   the questions (parts touching, level strokes read as one bar, a part tiny
   or squashed, worse than before, the heavy pen closing up), not what the
