@@ -189,6 +189,30 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   half, for 志 and 音. Alone, beside a left part or at the bottom they were
   half a character high (士, 位 拉 粒, 笠 竖). Use `K['士全']`, `K['立全']`
   there, and read `hz_balance.py`'s "least height filled" list.
+- **A stack is not narrower than its parts.** A top and bottom each boxed
+  into a middle slice (員's 口 and 貝, 台's 厶 and 口) made a character three
+  fifths of the square wide beside full-width neighbours. 0.990 stretched 41
+  such definitions. Read `hz_balance.py`'s "least width filled" list: under
+  600 across, widen the rects about x 500 until the ink is near 650. 目 申 自
+  and a few more are narrow by nature.
+- **Two level strokes need 70, not 40.** A gap that reads between slanted
+  strokes closes between two 橫: the pens draw one thick bar (舅's 臼 on 男,
+  賃, 房's 方 under 戶, 彙, 疊). `tools/hz_bars.py CHARS` lists the pairs; look
+  at them on a sheet and keep about 70 between the strokes' centres.
+- **A head with strokes inside hides what is under it.** `hz_balance.py`
+  skips a part that encloses another, so 虍's 七 (to y 440) lay on every
+  lower part that started at 390–440 (慮 膚 虜 虞, 52 characters), and 門's
+  leaves (to 440) on what stood inside (闡 闖 閘, 35 definitions). Start the
+  inner part 60–75 below the head's last inside stroke: 475 under 虍, 515
+  inside 門. `hz_bars.py` finds these too.
+- **Fixing a part breaks whoever worked around it.** 凯 placed the narrow 岂
+  in a rect 1,100 wide to fill its half; once 岂 itself was widened it ran
+  through 几. After changing a part's own size, compare every character's
+  closest gap between parts before and after (`hz_balance.py`'s "parts
+  closest together", on both trees) and look at each one that got tighter.
+- **Lifting a part can push it into the next.** 0.980's lift moved 𠬶's 又
+  up onto its 冖 (寝 寢 浸). After a mechanical pass, look at every changed
+  character large, not only the ones the pass was written for.
 - **A fallback is a claim.** "No form found, so use the character itself"
   said Taiwan writes 线. When a rule finds nothing, write nothing (`-`).
 - **Check only the round's characters at the edges.** `edges.py --batch` with
