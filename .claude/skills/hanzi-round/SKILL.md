@@ -251,6 +251,7 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
 ```
 - [ ] tools/hz_gate.py --selftest      every seeded defect fails
 - [ ] tools/hz_gate.py [--batch ...]   "no form got worse" (it exits 1 otherwise)
+- [ ] tools/hz_inside.py --selftest, then tools/hz_inside.py [--batch ...]   "nothing new"
 - [ ] tools/hz_forms.py, tools/hz_cross.py    0 problems
 - [ ] tools/hz_diff.py origin/main OUT  every changed form, before and after
 - [ ] tools/edges.py --chars "$(cat OUT.txt)"   cut: none, six fonts, both scripts' forms
@@ -270,6 +271,16 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   where the closest strokes are. A form that was already tight is debt
   (`--debt`): it fails only if it gets worse, so old noise cannot hide a new
   defect, which is what happened to every list before it.
+- **Inside a part is another gate.** `hz_gate.py` compares sibling parts, so
+  it cannot see a fault within one list of strokes or between two
+  characters. A review of 0.991 by three vendors' models and eleven sheet
+  readers found what that let through: 沈 with 沉's drawing (and three more
+  such pairs), 𠂤's bar drawn twice, 刃 and 飞 with the 點 through the 撇, 民
+  and 氏 with the 豎提 turned down and left. `hz_inside.py` finds those four
+  kinds, names the part, and fails on any that `tools/hz_inside.tsv` lacks.
+  What it still cannot see is a form that is well made and is the wrong
+  form (殳 with a hook, 今 with the mainland's dot in Taiwan's text): that
+  takes the standard, looked at large beside ours, a class at a time.
 - **Green before accept.** `--accept` rewrites the baseline, so it would also
   swallow a regression. Run it only when the gate is green, or when each
   remaining failure is one you can name in the commit message with its

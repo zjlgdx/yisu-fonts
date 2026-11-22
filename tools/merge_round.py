@@ -44,6 +44,9 @@ if subprocess.run([sys.executable, str(Path(__file__).parent / 'hz_forms.py'), '
 # already drawn a different drawing: older characters would keep the old one.
 if subprocess.run([sys.executable, str(Path(__file__).parent / 'hz_gate.py'), '--batch', ','.join(batches)]).returncode:
     sys.exit('fix what the gate lists first (tools/hz_gate.py --batch ...; --where CHARS says where)')
+# What the gate does not look at: inside one list of strokes, and one character against another.
+if subprocess.run([sys.executable, str(Path(__file__).parent / 'hz_inside.py'), '--batch', ','.join(batches)]).returncode:
+    sys.exit('fix what is listed first (tools/hz_inside.py --batch ...)')
 hs.write_text(text[:i].rstrip('\n') + '\n\n' + add + '\n\n\n' + text[i:], encoding='utf-8')
 
 bp = R / 'build.py'
