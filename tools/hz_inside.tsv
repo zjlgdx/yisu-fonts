@@ -1,20 +1,30 @@
-# tools/hz_inside.py --accept: findings looked at and left for now. check, then the part or the pair.
-same	伫佇
-same	剝剥
-same	朮术
-same	沈沉
-twice	C['管']
-twice	K['𠂤']
-dot	C['刃']
-dot	C['囱']
-dot	C['炙']
-dot	C['舞']
-dot	C['飞']
-dot	K['刃']
-dot	K['悤']
-dot	K['祭']
-dot	K['离T']
-dot	K['舛']
-dot	K['虫']
-flick	C['民']
-flick	K['氏']
+# tools/hz_inside.py --accept: findings looked at and left for now. check, the part or the pair, how many.
+same	伫佇	1
+same	剝剥	1
+same	朮术	1
+same	沈沉	1
+twice	C['管']	1
+twice	K['𠂤']	1
+dot	C['刃']	1
+dot	C['囱']	1
+dot	C['炙']	1
+dot	C['舞']	1
+dot	C['風']	1
+dot	C['飞']	1
+dot	K['㐬']	1
+dot	K['专']	1
+dot	K['云']	1
+dot	K['充']	1
+dot	K['刃']	1
+dot	K['祭']	1
+dot	K['离']	1
+dot	K['离T']	1
+dot	K['舛']	1
+dot	K['虫']	1
+dot	K['𠫓']	1
+flick	C['所']	1
+flick	C['民']	1
+flick	C['質']	2
+flick	K['户']	1
+flick	K['氏']	1
+flick	K['舟']	1

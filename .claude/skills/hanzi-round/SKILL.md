@@ -277,7 +277,11 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   readers found what that let through: 沈 with 沉's drawing (and three more
   such pairs), 𠂤's bar drawn twice, 刃 and 飞 with the 點 through the 撇, 民
   and 氏 with the 豎提 turned down and left. `hz_inside.py` finds those four
-  kinds, names the part, and fails on any that `tools/hz_inside.tsv` lacks.
+  kinds, names the part, and fails when a part has more of one than
+  `tools/hz_inside.tsv` says. Its own first review, by three vendors'
+  models, got every kind past it (strokes in another order, a bar in
+  pieces, a tail written as a curve) and found it skipping 120 unnamed
+  lists; each of those is now a seed in its self-test.
   What it still cannot see is a form that is well made and is the wrong
   form (殳 with a hook, 今 with the mainland's dot in Taiwan's text): that
   takes the standard, looked at large beside ours, a class at a time.
