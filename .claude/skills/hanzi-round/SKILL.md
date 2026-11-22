@@ -244,8 +244,8 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
 - [ ] tools/hz_gate.py --selftest      every seeded defect fails
 - [ ] tools/hz_gate.py [--batch ...]   "no form got worse" (it exits 1 otherwise)
 - [ ] tools/hz_forms.py, tools/hz_cross.py    0 problems
-- [ ] tools/edges.py --chars "$(head -1 OUT.txt)"   cut: none, six fonts
 - [ ] tools/hz_diff.py origin/main OUT  every changed form, before and after
+- [ ] tools/edges.py --chars "$(cat OUT.txt)"   cut: none, six fonts, both scripts' forms
 - [ ] the sheets reviewed by an agent that did not make the change
 - [ ] each finding fixed or answered, the gate green again
 - [ ] tools/hz_gate.py --accept        only now; the .tsv's diff is in the commit
@@ -266,6 +266,15 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   form that is in the baseline and no longer drawn fails as gone. Both came
   from a reviewer on another model reading the gate itself: have the checks
   reviewed like the drawings.
+- **Two models found different holes.** The second review, on a third model,
+  found what the first had not: side-by-side strokes were only looked for in
+  橫 and 鉤 (月's left side is a 撇 that stands upright for 570), a built
+  character redrawn as one list of strokes left nothing to measure and
+  passed, a batch that redefines a part changes no older character at all,
+  the edge check never drew a mainland form, and four of the gate's reasons
+  had no seed, so deleting them left the self-test green. The self-test now
+  fails when a reason has no seed of its own. Ask each reviewer one thing:
+  can something that got worse still pass, and show the command.
 - **Green before accept.** `--accept` rewrites the baseline, so it would also
   swallow a regression. Run it only when the gate is green, or when each
   remaining failure is one you can name in the commit message with its
@@ -312,8 +321,10 @@ definitions, redraws characters nobody is looking at.
 ```
 
 The gate first (seconds): it fails on a new drawing whose parts are under
-30 apart or whose level strokes are under 55, and on any older character a
-batch's part made worse. `merge_round.py` runs it again and refuses on red.
+30 apart or whose level strokes are under 55, and on a batch that gives a
+part or character already drawn a different drawing (the characters built
+on the old one keep it, so change it in `hanzi_strokes.py`, where the gate
+sees all of them). `merge_round.py` runs it again and refuses on red.
 
 It draws every character in all six fonts on the build's own canvas
 (`build.canvas`) and lists any whose ink reaches the edge; fix them first.

@@ -40,8 +40,8 @@ if again:
 # shared characters to add to _SHARED_TW afterwards; check_fonts.py fails until they are.
 if subprocess.run([sys.executable, str(Path(__file__).parent / 'hz_forms.py'), '--batch', ','.join(batches)]).returncode:
     sys.exit('fix the forms above first (tools/hz_forms.py --batch ...)')
-# How the new drawings' parts sit together, and whether a part the batch redefines
-# made an older character worse.
+# How the new drawings' parts sit together. It also refuses a batch that gives a part
+# already drawn a different drawing: older characters would keep the old one.
 if subprocess.run([sys.executable, str(Path(__file__).parent / 'hz_gate.py'), '--batch', ','.join(batches)]).returncode:
     sys.exit('fix what the gate lists first (tools/hz_gate.py --batch ...; --where CHARS says where)')
 hs.write_text(text[:i].rstrip('\n') + '\n\n' + add + '\n\n\n' + text[i:], encoding='utf-8')
