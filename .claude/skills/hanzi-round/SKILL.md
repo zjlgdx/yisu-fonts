@@ -169,7 +169,7 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   check, find out why it fires; fix the data until it prints nothing, then
   make it fail the build.
 - **Strokes that meet don't cross.** 癶's two 撇 rest on its 捺; drawn through
-  it, 登's top read as an ㄨ for 700 versions, in the proof line itself. Nobody
+  it, 登's top read as an ㄨ until 0.970, in the proof's own first line. Nobody
   looks hard at a common character. `tools/hz_cross.py` lists a 撇 that
   crosses an earlier 捺 (run it on the batches); for the rest, look at each
   new part large (`hz_sheet.py --size 300`) beside the standard, asking of
