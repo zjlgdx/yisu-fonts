@@ -1,4 +1,4 @@
-"""python tools/hz_sheet.py OUT.jpg [--batch A.py,B.py] [CHARS] [--size N]
+"""python tools/hz_sheet.py OUT.jpg [--batch A.py,B.py] [CHARS] [--size N] [--mainland]
 
 A contact sheet for drawing: each character in Yinni, Huasha
 and Louhen Bold, with Huasha again at twice the size. With no CHARS,
@@ -16,9 +16,12 @@ ap.add_argument('chars', nargs='?', default='')
 ap.add_argument('--batch', default='')
 ap.add_argument('--size', type=int, default=80)
 ap.add_argument('--per', type=int, default=12, help='characters per row')
+ap.add_argument('--mainland', action='store_true', help="draw the mainland's form where a character has one")
 a = ap.parse_args()
 
 hs = _repo.load(a.batch)
+if a.mainland:
+    hs.C.update(hs.ZHS)
 import build
 import hanzi
 
