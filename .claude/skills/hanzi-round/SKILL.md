@@ -210,6 +210,11 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   through 几. After changing a part's own size, compare every character's
   closest gap between parts before and after (`hz_balance.py`'s "parts
   closest together", on both trees) and look at each one that got tighter.
+- **An inline redraw of a paired part loses the mainland form.** 房's 戶 was
+  redrawn shorter as an inline `S(...)`; `_mainland()` swaps parts by
+  identity, so the mainland 房 silently took Taiwan's 撇. A variant of a part
+  in `_TW_PARTS` is itself a pair (`K['戶短']`, `K['户短']`). After a fix,
+  check that no character's two forms became the same drawing.
 - **Lifting a part can push it into the next.** 0.980's lift moved 𠬶's 又
   up onto its 冖 (寝 寢 浸). After a mechanical pass, look at every changed
   character large, not only the ones the pass was written for.
