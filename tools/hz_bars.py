@@ -27,7 +27,7 @@ def bars(strokes):
             continue
         pts = points([stroke])
         for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
-            if abs(x1 - x0) >= 120 and abs(y1 - y0) <= 25:
+            if abs(x1 - x0) >= 100 and abs(y1 - y0) <= 25:
                 out.append((min(x0, x1), max(x0, x1), (y0 + y1) / 2))
     return out
 

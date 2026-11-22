@@ -21,8 +21,8 @@ character's own frame:
           centre line. Nothing is skipped: a part that encloses another
           (虍, 門, 宀) is measured stroke against stroke like any other.
   bars    least distance between two level runs of different parts that
-          overlap sideways by 100 or more, or two upright ones that overlap
-          by 100 up and down, whatever the stroke is called (月's left side
+          overlap sideways by 60 or more, or two upright ones that overlap
+          by 60 up and down, whatever the stroke is called (月's left side
           is a 撇 that stands upright for 570). Strokes side by side need more room
           than slanted ones before the pens draw one thick bar (舅's 臼 on
           男) or a double wall (阃's 困 along 门's right side).
@@ -39,9 +39,12 @@ Fails, against the baseline:
             than before. clear and bars are each form's least, so a form
             whose parts already meet somewhere would hide a new collision
             elsewhere; the counts do not
+  near      the same count under 40 apart: a gap of 25 is one stroke to
+            the heavy pen and is not touching
   flat      the same count for side-by-side runs under 45 apart
-  unbuilt   a form that was built of parts is now one list of strokes, so
-            nothing in it is measured
+  unbuilt   fewer pairs of parts are measured than before: two parts were
+            written as one list of strokes, and what is inside a list is
+            not measured
   gone      a form in the baseline is no longer drawn
   redefined (--batch) the batch gives a part or character that is already
             drawn a different drawing. The characters built on the old one
@@ -56,7 +59,9 @@ the batch is merged, so the gate runs again after merge_round.py (in
 check_fonts.py).
 
 A form that was already tight stays in the baseline as debt (--debt lists
-it); it fails only if it gets worse. A change meant to be so is accepted
+it); it fails only if it gets worse. One that a change moved and that is
+still under a floor is listed on every run until the baseline is accepted:
+盧's 田 went from 5 off 虍 to 32 off 皿, which is better and still one bar. A change meant to be so is accepted
 with --accept, and the baseline's diff then shows the reviewer every number
 that moved. Run --selftest after changing this file: a gate that has not
 been seen to fail proves nothing.
@@ -73,8 +78,8 @@ TOK = re.compile(r'[A-Za-z]|-?\d+\.?\d*')
 CLEAR_DROP, CLEAR_ZONE, CLEAR_FLOOR = 8, 60, 30
 BARS_DROP, BARS_ZONE, BARS_FLOOR = 8, 70, 55
 SIZE_DROP, SIZE_ZONE = 30, 620
-TOUCH, FLAT = 20, 45
-REASONS = ('tighter', 'bars', 'narrower', 'shorter', 'merged', 'touching', 'flat', 'unbuilt', 'gone', 'new, parts', 'new, side')
+TOUCH, NEAR, FLAT, RUN = 20, 40, 45, 60
+REASONS = ('tighter', 'bars', 'narrower', 'shorter', 'merged', 'touching', 'near', 'flat', 'unbuilt', 'gone', 'redefined', 'new, parts', 'new, side')
 FAR = 999
 
 
@@ -139,10 +144,11 @@ def shape(strokes):
 
 
 def pair(p, q, limit=120):
-    """(clear, bars, where, touching, flat) between two parts' shapes; where
-    is the middle of the two closest segments, touching and flat the number
-    of pairs of strokes under TOUCH apart and side by side under FLAT."""
-    clear, bars, where, touching, flat = FAR, FAR, None, 0, 0
+    """(clear, bars, where, touching, flat, near) between two parts' shapes;
+    where is the middle of the two closest segments; touching, near and flat
+    count the pairs of strokes under TOUCH and NEAR apart and side by side
+    under FLAT."""
+    clear, bars, where, touching, near_n, flat = FAR, FAR, None, 0, 0, 0
     for ka, a, ba in p:
         for kb, b, bb in q:
             if ba[0] - bb[2] > limit or bb[0] - ba[2] > limit or ba[1] - bb[3] > limit or bb[1] - ba[3] > limit:
@@ -156,23 +162,24 @@ def pair(p, q, limit=120):
                         clear = d
                         where = tuple(round((a[i][k] + a[i + 1][k]) / 2) for k in (0, 1)) + tuple(round((b[j][k] + b[j + 1][k]) / 2) for k in (0, 1))
                     (x0, y0), (x1, y1), (u0, v0), (u1, v1) = a[i], a[i + 1], b[j], b[j + 1]
-                    if abs(x1 - x0) >= 100 and abs(y1 - y0) <= 25 and abs(u1 - u0) >= 100 and abs(v1 - v0) <= 25:
-                        if min(max(x0, x1), max(u0, u1)) - max(min(x0, x1), min(u0, u1)) >= 100:
+                    if abs(x1 - x0) >= RUN and abs(y1 - y0) <= 25 and abs(u1 - u0) >= RUN and abs(v1 - v0) <= 25:
+                        if min(max(x0, x1), max(u0, u1)) - max(min(x0, x1), min(u0, u1)) >= RUN:
                             side = min(side, abs((y0 + y1) / 2 - (v0 + v1) / 2))
-                    if abs(y1 - y0) >= 100 and abs(x1 - x0) <= 25 and abs(v1 - v0) >= 100 and abs(u1 - u0) <= 25:
-                        if min(max(y0, y1), max(v0, v1)) - max(min(y0, y1), min(v0, v1)) >= 100:
+                    if abs(y1 - y0) >= RUN and abs(x1 - x0) <= 25 and abs(v1 - v0) >= RUN and abs(u1 - u0) <= 25:
+                        if min(max(y0, y1), max(v0, v1)) - max(min(y0, y1), min(v0, v1)) >= RUN:
                             side = min(side, abs((x0 + x1) / 2 - (u0 + u1) / 2))
             bars = min(bars, side)
             touching += near < TOUCH
+            near_n += near < NEAR
             flat += side < FLAT
-    return clear, bars, where, touching, flat
+    return clear, bars, where, touching, flat, near_n
 
 
 def measure(item, hanzi, count=None, where=None):
-    """(clear, bars, width, height, touching, flat, pairs) of one form;
+    """(clear, bars, width, height, touching, flat, pairs, near) of one form;
     pairs is how many pairs of sibling parts were measured. `where`, a list,
     gets the closest pair's two points."""
-    best = [FAR, FAR, 0, 0, 0]
+    best = [FAR, FAR, 0, 0, 0, 0]
 
     def walk(node, box):
         if isinstance(node, list):
@@ -191,10 +198,10 @@ def measure(item, hanzi, count=None, where=None):
         shapes = [shape(hanzi.flatten(p, b)) for p, b in kids]
         for i in range(len(shapes)):
             for j in range(i + 1, len(shapes)):
-                c, b, at, t, f = pair(shapes[i], shapes[j])
+                c, b, at, t, f, n = pair(shapes[i], shapes[j])
                 if c < best[0] and where is not None:
                     where[:] = [at]
-                best[:] = min(best[0], c), min(best[1], b), best[2] + t, best[3] + f, best[4] + 1
+                best[:] = min(best[0], c), min(best[1], b), best[2] + t, best[3] + f, best[4] + 1, best[5] + n
                 if count is not None:
                     count['pairs'] += 1
         if count is not None:
@@ -207,7 +214,7 @@ def measure(item, hanzi, count=None, where=None):
         return None
     w = max(s[2][2] for s in whole) - min(s[2][0] for s in whole)
     h = max(s[2][3] for s in whole) - min(s[2][1] for s in whole)
-    return round(best[0]), round(best[1]), round(w), round(h), best[2], best[3], best[4]
+    return round(best[0]), round(best[1]), round(w), round(h), best[2], best[3], best[4], best[5]
 
 
 def is_han(ch):
@@ -215,7 +222,7 @@ def is_han(ch):
 
 
 def survey(H, hanzi, count=None, only=None):
-    """{(form, ch): (clear, bars, w, h, differs, touching, flat, pairs)}; form C is
+    """{(form, ch): (clear, bars, w, h, differs, touching, flat, pairs, near)}; form C is
     Taiwan's or the shared drawing, S the mainland's. `only` keeps it to
     some characters."""
     out = {}
@@ -246,7 +253,7 @@ def judge(key, now, was):
     """Reasons this form fails, given its baseline row (None when new)."""
     if now is None:
         return ['gone: in the baseline and no longer drawn']
-    clear, bars, w, h, differs, touching, flat, pairs = now
+    clear, bars, w, h, differs, touching, flat, pairs, near = now
     why = []
     if was is None:
         if clear < CLEAR_FLOOR:
@@ -268,9 +275,18 @@ def judge(key, now, was):
         why.append(f'touching: {was[5]} -> {touching} pairs of strokes of different parts under {TOUCH} apart')
     if flat > was[6]:
         why.append(f'flat: {was[6]} -> {flat} pairs of side-by-side strokes under {FLAT} apart')
-    if was[7] and not pairs:
-        why.append('unbuilt: was built of parts, now one list of strokes, so nothing in it is measured')
+    if near > was[8]:
+        why.append(f'near: {was[8]} -> {near} pairs of strokes of different parts under {NEAR} apart')
+    if pairs < was[7]:
+        why.append(f'unbuilt: {was[7]} -> {pairs} pairs of parts measured; what is written as one list of strokes is not measured')
     return why
+
+
+def redefinitions(H, drawn, hanzi):
+    """Names in `drawn`, [(table, key, item)] taken before the batches ran,
+    that the batches gave a different drawing."""
+    return [f"{t}['{k}']" for t, k, v in drawn if getattr(H, t).get(k) is not v
+            and (k not in getattr(H, t) or hanzi.flatten(getattr(H, t)[k]) != hanzi.flatten(v))]
 
 
 def verdict(now, base):
@@ -285,7 +301,7 @@ def selftest(H, hanzi):
     (what, form, character, before, after, reason): before None is today's
     drawing, after None deletes it, a character None is one not drawn yet."""
     box, S, FULL = H.box, H.S, H.FULL
-    bar = lambda y: S(f'E M100 {y} L900 {y}')
+    bar = lambda y, x0=100, x1=900: S(f'E M{x0} {y} L{x1} {y}')
     wall = lambda x: S(f'E M{x} 100 L{x} 900')
     free = next(chr(c) for c in range(0x4E00, 0x9FFF) if chr(c) not in H.C and chr(c) not in H.ZHS)
     seeds = [
@@ -313,7 +329,14 @@ def selftest(H, hanzi):
         ('a drawing deleted (房)', 'S', '房', None, None, 'gone'),
         ('a new character with parts on each other', 'C', None, None,
          box((S('P M200 200 L800 800'), FULL), (S('P M800 200 L200 800'), FULL)), 'new, parts'),
-        ('a new character with two bars as one', 'C', None, None, box((bar(300), FULL), (bar(340), FULL)), 'new, side'),
+        ('a new character with two short bars as one', 'C', None, None,
+         box((bar(300, 200, 270), FULL), (bar(330, 200, 270), FULL)), 'new, side'),
+        ('two short walls 25 apart, far from where the parts already cross', 'C', None,
+         box((S('P M50 50 L350 350'), FULL), (S('P M350 50 L50 350'), FULL), (S('E M700 700 L700 750'), FULL), (S('E M760 700 L760 750'), FULL)),
+         box((S('P M50 50 L350 350'), FULL), (S('P M350 50 L50 350'), FULL), (S('E M700 700 L700 750'), FULL), (S('E M725 700 L725 750'), FULL)), 'near'),
+        ('two parts of three written as one list', 'C', None,
+         box((bar(300), FULL), (bar(370), FULL), (wall(50), FULL)),
+         box((S('E M100 300 L900 300; E M100 330 L900 330'), FULL), (wall(50), FULL)), 'unbuilt'),
     ]
     bad = 0
     for name, form, ch, before, item, want in seeds:
@@ -338,7 +361,14 @@ def selftest(H, hanzi):
         ok = any(w.startswith(want) for w in why)
         bad += not ok
         print(f"  {'red ' if ok else 'GREEN'}  {name}: {'; '.join(why) or 'passed'}")
-    unseeded = [r for r in REASONS if r not in {x[-1] for x in seeds}]
+    drawn, keep = [('K', '木', H.K['木'])], H.K['木']
+    H.K['木'] = bar(500)
+    ok = redefinitions(H, drawn, hanzi) == ["K['木']"]
+    H.K['木'] = keep
+    ok = ok and not redefinitions(H, drawn, hanzi)
+    bad += not ok
+    print(f"  {'red ' if ok else 'GREEN'}  a batch that redraws a part already drawn (木)")
+    unseeded = [r for r in REASONS if r not in {x[-1] for x in seeds} | {'redefined'}]
     if unseeded:
         print('  no seed for:', ', '.join(unseeded))
     bad += len(unseeded)
@@ -359,8 +389,7 @@ def main():
     import hanzi
     drawn = [(t, k, v) for t in 'KC' for k, v in getattr(H, t).items()]
     H = _repo.load(a.batch)
-    redefined = [f"{t}['{k}']" for t, k, v in drawn if getattr(H, t).get(k) is not v
-                 and (k not in getattr(H, t) or hanzi.flatten(getattr(H, t)[k]) != hanzi.flatten(v))]
+    redefined = redefinitions(H, drawn, hanzi)
     if a.selftest:
         sys.exit(1 if selftest(H, hanzi) else 0)
     if a.where:
@@ -371,12 +400,12 @@ def main():
                     m = measure(table[ch], hanzi, where=at)
                     if not m:
                         continue
-                    print(f'{ch} ({f}): parts {m[0]} apart, side-by-side strokes {m[1]}, ink {m[2]} x {m[3]}, {m[4]} pairs of strokes under {TOUCH}, {m[5]} side by side under {FLAT}; closest at {at[0] if at else None}')
+                    print(f'{ch} ({f}): parts {m[0]} apart, side-by-side strokes {m[1]}, ink {m[2]} x {m[3]}, {m[4]} pairs of strokes under {TOUCH} and {m[7]} under {NEAR}, {m[5]} side by side under {FLAT}; closest at {at[0] if at else None}')
         return
     count = {'nodes': 0, 'pairs': 0}
     now = survey(H, hanzi, count)
     if a.accept:
-        lines = ['# tools/hz_gate.py --accept. form (C Taiwan/shared, S mainland), character, clear, bars, width, height, differs, touching, flat, pairs']
+        lines = ['# tools/hz_gate.py --accept. form (C Taiwan/shared, S mainland), character, clear, bars, width, height, differs, touching, flat, pairs, near']
         lines += ['\t'.join([f, ch] + [str(v) for v in m]) for (f, ch), m in sorted(now.items())]
         BASE.write_text('\n'.join(lines) + '\n', encoding='utf-8')
         print(f'baseline written: {len(now)} forms')
@@ -393,6 +422,11 @@ def main():
     if a.debt:
         print('  parts:', '  '.join(f'{ch} {v}' for v, ch in tight))
         print('  side by side:', '  '.join(f'{ch} {v}' for v, ch in flat))
+    moved = [(k, m) for k, m in sorted(now.items()) if k in base and m[:2] != base[k][:2]
+             and (m[0] < CLEAR_FLOOR or m[1] < BARS_FLOOR) and not judge(k, m, base[k])]
+    if moved:
+        print(f'moved and still under a floor ({len(moved)}; better than it was is not yet good, so fix each or name it):')
+        print('  ' + '  '.join(f"{ch}{'(S)' if f == 'S' else ''} parts {base[f, ch][0]}->{m[0]} side {base[f, ch][1]}->{m[1]}" for (f, ch), m in moved))
     for (f, ch), why in fails:
         print(f"FAIL {ch} ({'mainland' if f == 'S' else 'default'}): {'; '.join(why)}")
     if redefined:

@@ -9,8 +9,9 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
   ones (its full report goes to OUT_DIR/fontbakery-FAMILY.txt, one file per
   checkout, so checks can run side by side);
 - each character holds its own script's form of every part (tools/hz_forms.py);
-- no drawing sits worse than the baseline says it did: parts closer, level
-  strokes on each other, ink narrower, the two scripts' forms merged
+- no drawing sits worse than the baseline says it did: parts closer, strokes
+  side by side on each other, ink narrower, the two scripts' forms merged, a
+  drawing gone or no longer built of parts
   (tools/hz_gate.py, and its --selftest, which must see seeded defects fail);
 - no personal data: emails, home or temp paths, or anything --private matches
   (or the YISU_PRIVATE environment variable), wherever text can live in

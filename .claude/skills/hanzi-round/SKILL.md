@@ -140,9 +140,10 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
 - **A shared part's mistake spreads.** 豕 lacked its short right 丿, 罙 took
   穴's dot, 龠 lacked the 一 under 人, 奥 closed its 冂 and lost 米's lower
   strokes: each was found when a new character used the part and its count
-  came out wrong. Count the part itself and fix it where it is defined: a
-  `work/rLAST_fix.py` whose definitions replace the old ones in place at
-  merge, and a before/after sheet of every character that uses the part.
+  came out wrong. Count the part itself and fix it where it is defined, in
+  `hanzi_strokes.py` (a batch cannot redraw a part: the gate and
+  `merge_round.py` refuse it), with a before/after sheet of every character
+  that uses the part (`hz_diff.py`).
 - **Look-alike parts are different characters.** 夐 ends in 夂 (14 strokes,
   觼); 敻 ends in 攵 (15, 瓊). Check the code point, not the look.
 - **A shell pipe can mangle the characters.** `grep | cut -c` on macOS cuts
@@ -200,11 +201,18 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   賃, 房's 方 under 戶, 彙, 疊). `tools/hz_bars.py CHARS` lists the pairs; look
   at them on a sheet and keep about 70 between the strokes' centres.
 - **A head with strokes inside hides what is under it.** `hz_balance.py`
-  skips a part that encloses another, so 虍's 七 (to y 440) lay on every
-  lower part that started at 390–440 (慮 膚 虜 虞, 52 characters), and 門's
-  leaves (to 440) on what stood inside (闡 闖 閘, 35 definitions). Start the
-  inner part 60–75 below the head's last inside stroke: 475 under 虍, 515
-  inside 門. `hz_bars.py` finds these too.
+  skips a part that encloses another, so 虍's 七 lay on every lower part
+  (慮 膚 虜 虞, 52 characters) and 門's leaves on what stood inside (闡 闖 閘).
+  Keep 60–75 between the head's last inside stroke and the first ink under
+  it, measured on the ink (`hz_gate.py --where`), not on the rect. 虍's 七
+  now ends at 415 and the part under it has its ink from 475. A character
+  with something inside 門 uses `K['門框']`, whose leaves end at 360, with
+  the inside part's ink over about x 215–780, y 435–935; `K['門']` with its
+  long leaves is for 門 itself and for parts set beside it.
+- **Better is not yet good.** 盧's 田 lay on 虍 (5 apart); the fix moved it
+  down to 32 from 皿, and the gate, which compares with before, called that
+  an improvement. It now lists every form a change moved that is still under
+  a floor: bring each over the floor or name it in the commit.
 - **Fixing a part breaks whoever worked around it.** 凯 placed the narrow 岂
   in a rect 1,100 wide to fill its half; once 岂 itself was widened it ran
   through 几. After changing a part's own size, compare every character's
@@ -247,7 +255,10 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
 - [ ] tools/hz_diff.py origin/main OUT  every changed form, before and after
 - [ ] tools/edges.py --chars "$(cat OUT.txt)"   cut: none, six fonts, both scripts' forms
 - [ ] the sheets reviewed by an agent that did not make the change
-- [ ] each finding fixed or answered, the gate green again
+- [ ] the whole change reviewed on another vendor's model; and the tools too,
+      if a tool changed ("Having the checks reviewed", below)
+- [ ] each finding rerun, then fixed or answered; the gate green again
+- [ ] the gate's "moved and still under a floor" list: each fixed or named
 - [ ] tools/hz_gate.py --accept        only now; the .tsv's diff is in the commit
 ```
 
@@ -259,26 +270,11 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   where the closest strokes are. A form that was already tight is debt
   (`--debt`): it fails only if it gets worse, so old noise cannot hide a new
   defect, which is what happened to every list before it.
-- **A least hides everything above it.** The gate first kept one number a
-  form (its closest pair), so a form whose parts already meet somewhere, as
-  1,727 do, could take a new collision elsewhere unseen. It now also counts
-  the pairs of strokes under 20 apart and fails when there are more; and a
-  form that is in the baseline and no longer drawn fails as gone. Both came
-  from a reviewer on another model reading the gate itself: have the checks
-  reviewed like the drawings.
-- **Two models found different holes.** The second review, on a third model,
-  found what the first had not: side-by-side strokes were only looked for in
-  橫 and 鉤 (月's left side is a 撇 that stands upright for 570), a built
-  character redrawn as one list of strokes left nothing to measure and
-  passed, a batch that redefines a part changes no older character at all,
-  the edge check never drew a mainland form, and four of the gate's reasons
-  had no seed, so deleting them left the self-test green. The self-test now
-  fails when a reason has no seed of its own. Ask each reviewer one thing:
-  can something that got worse still pass, and show the command.
 - **Green before accept.** `--accept` rewrites the baseline, so it would also
   swallow a regression. Run it only when the gate is green, or when each
   remaining failure is one you can name in the commit message with its
-  reason (蓍 in 0.990: a pair measured for the first time, not moved).
+  reason. The gate also lists what a change moved and left under a floor
+  (33 forms in 0.990, the dense four-tier ones): fix each or name it too.
 - **A check never seen failing proves nothing.** The gate's first self-test
   passed two of its seeded defects: they were compared with a baseline that
   already held them. A new check goes in with a seed that it fails on.
@@ -297,6 +293,49 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
 - **A lesson becomes a check.** When something gets past all this, add the
   measurement to `hz_gate.py` and a seed to its self-test before fixing the
   glyph. A sentence here is the last resort, for what no script can see.
+
+### Having the checks reviewed
+
+The gate was written by the one whose misses it was meant to catch, and its
+first three reviews, on three other models, each got a worse drawing past
+it. What they found, 0.990:
+
+| review | got past the gate |
+|---|---|
+| first | a deleted drawing; a new collision in a form whose parts already met (the gate kept one least per form); a self-test that never ran the gate's own path |
+| second | a wall beside 月's upright 撇 (side-by-side strokes were only looked for in 橫 and 鉤); a built character rewritten as one list of strokes; a batch redrawing a part; mainland forms never drawn by the edge check; four reasons with no seed |
+| third | two short bars 30 apart (runs under 100 long were not runs); two of three parts merged into one list; a gap of 25 beside an old crossing (the count stopped at 20); the redefinition check itself unseeded |
+| a full review of the drawings | 盧's 田, moved off 虍 and onto 皿: better than before, so the gate passed it |
+
+No two found the same holes, and none was found by the author. So:
+
+1. **Two kinds of review, both needed.** One reads only the tools and is
+   asked one question: can a drawing that got worse still pass, and what
+   does the flow claim that it does not check? The other reads the whole
+   change, most of all `hanzi_strokes.py`, draws what it doubts with
+   `hz_sheet.py`, and looks for slips in rects, family members missed, and
+   text that is no longer true. Neither stands in for the other.
+2. **Other models, at least two vendors.** From this repository:
+   `bash ~/.claude/skills/one-shot-pairing/scripts/review-panel.sh --base
+   origin/main --members codex,agy,grok --note "..."` on the pushed commit;
+   each member works in its own throwaway worktree. The note gives the
+   question, the venv's python, and the rules (no build.py, no downloads, no
+   reference images saved, no fonts installed).
+3. **A finding is a command.** Each comes with a command and its output;
+   rerun it before believing it, and fix only what reproduces.
+4. **Fix the check, then measure again from main.** After a change to what
+   the gate measures, rebuild the baseline from main with the new code (copy
+   `hz_gate.py` into a worktree of `origin/main`, `--accept` there, copy the
+   .tsv back) and run the gate on the branch: a stricter measure finds
+   drawings the old one passed (阊, then 屑 茎 赣 鹇 鼉 in 0.990).
+5. **Every reason has a seed.** A new way to fail goes in with a seeded
+   defect that only it catches; the self-test fails when a reason has none.
+   A threshold gets a seed just inside it (bars 70 long when the limit is
+   60), or it can drift back unseen.
+6. **Tools first, build last.** The reviews need no built fonts, and each
+   one that changes a drawing restarts the hour's build (three times in
+   0.990). Run the reviews on the pushed branch, fix, and build once the
+   last report is in.
 
 ### Changing a part that is already drawn
 
