@@ -20,6 +20,11 @@ if [ -n "$(git ls-remote --tags origin "refs/tags/v$V")" ] || ! python3 -c "impo
 fi
 BEFORE=$(git show origin/main:README.md | sed -nE 's/.*rows are ([0-9,]+) characters across both scripts.*/\1/p' | tr -d ,)
 NEW=$((COUNT - BEFORE))
+# A merge forward resolved in a hurry once left its markers in a commit.
+if git grep -nE '^(<<<<<<<|>>>>>>>) ' -- '*.py' '*.md' '*.tsv' '*.sh'; then
+  echo "conflict markers above: resolve them first" >&2
+  exit 1
+fi
 gitleaks git --no-banner --log-opts="origin/main..HEAD"
 git push -q -u origin "$BR"
 fixline=""

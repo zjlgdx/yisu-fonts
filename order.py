@@ -20,7 +20,8 @@ characters only; no glyphs.
   mainland China's 通用规范汉字表 (2013).
 
 Each row: rank, count, the Simplified form, its Traditional forms (the same
-character where both write it alike), and the 通用规范汉字表 level-1 index or
+character where both write it alike; '-' where Taiwan writes it another way
+that has its own row or that Big5 lacks), and the 通用规范汉字表 level-1 index or
 '-' (a Traditional form in level 1 itself adds its own: 干 乾干幹 23 乾:2215).
 A round draws the next rows in order, every form in them.
 
@@ -181,12 +182,27 @@ def main(folder, moe_path=Path(__file__).with_name('moe_4808.tsv')):
         m = re.search(r'2013:(\d+)', tgh.get(ch, ''))
         return m.group(1) if m and int(m.group(1)) <= 3500 else None
 
+    # A Simplified character Taiwan writes another way, whose Traditional form
+    # the rules above left out, kept itself as its form. Taiwan doesn't write
+    # it (涝, 线, 嗵 is another matter: it has no other form). Its column holds
+    # the Traditional form Big5 has (涝 澇), or '-' when that form has a row
+    # of its own (净: 淨) or Big5 lacks it (耢: 耮).
+    own_row = {t for _, _, forms in rows for t in forms}
+    in_big5 = set(fields(folder, 'Unihan_OtherMappings.txt', 'kBigFive'))   # 彝 is, though CNS has it in plane 3
+    def taiwan_writes(ch, forms):
+        if forms != [ch] or ch == '-' or ch not in trad or ch in chars(trad[ch]) or ch in planes or ch in in_big5:
+            return forms
+        if any(ch in chars(simp.get(t, '')) for t in own_row - {ch}):
+            return []
+        return [t for t in chars(trad[ch]) if t in planes and t not in own_row]
+
     for rank, (ch, n, forms) in enumerate(rows, 1):
+        forms = taiwan_writes(ch, forms)
         # The Simplified form's level-1 index, then any Traditional form's
         # that is in level 1 itself (干 乾干幹: 23 乾:2215).
         level1 = [index(ch)] if index(ch) else []
         level1 += [f'{t}:{index(t)}' for t in forms if t != ch and index(t)]
-        print(f'{rank}\t{n}\t{ch}\t{"".join(forms)}\t{" ".join(level1) or "-"}')
+        print(f'{rank}\t{n}\t{ch}\t{"".join(forms) or "-"}\t{" ".join(level1) or "-"}')
 
 
 if __name__ == '__main__':

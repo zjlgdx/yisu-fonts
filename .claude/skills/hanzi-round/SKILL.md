@@ -49,8 +49,12 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
    `K['⻏T']` (three strokes), `K['敖T']`, `K['戶']`. Add it to `_SHARED_TW` at the end of
    `hanzi_strokes.py`, which gives it the mainland's form for text tagged
    Simplified Chinese. A Simplified-only character built on a shared one
-   draws `_mainland(C['苗'])`. `tools/hz_forms.py` checks both, and
-   `check_fonts.py` runs it.
+   draws `_mainland(C['苗'])`. Which a character is, `hanzi_order.tsv` says:
+   the same character in both columns is shared; a `-` in the Traditional
+   column (or another character there) means Taiwan doesn't write it, so it
+   is Simplified only. `tools/hz_forms.py` checks all of this (`--batch` for
+   drafts); `merge_round.py` runs it before it merges and `check_fonts.py`
+   after the build.
 8. The order strokes are drawn in is the order the site writes them, so draw
    them in the standard's order, `box()` parts included: a part drawn first in
    the list is written first. Look the order up for both scripts before
@@ -107,8 +111,8 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
 - **A shared character takes Taiwan's part.** Where a part has a Taiwan form
   (`K['瓦T']`, `K['叟T']`, any name in `_TW_PARTS`), a character both scripts
   write uses that one, and goes in `_SHARED_TW` so Simplified text gets the
-  mainland's. `hz_forms.py` catches a Taiwan part with no ZHS form, not a
-  mainland part used where Taiwan's belongs: look for `K['x']` where `K['xT']` exists.
+  mainland's. `hz_forms.py` fails on a Taiwan part with no ZHS form, and on
+  a mainland part in a character Taiwan writes.
 - **Draft only what `hz_todo.py` lists.** A row's Traditional form is often
   drawn already (rows 5,660–5,829 redrew 23 that were, and the later
   definition won, moving six glyphs). Take the characters from its output, not
@@ -146,12 +150,35 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   `edges.py` fails when none of `--chars` is drawn, so a mangled list can't
   pass as clean.
 
-- **A shared character drawn with the mainland's part.** `hz_forms.py` catches
-  a Taiwan part where the mainland's belongs, not the other way round: 獾 took
-  `K['雚']` (the mainland's 艹) as its default, so Traditional text got it
-  too. `tools/hz_mainland_parts.py FIRST` lists the round's characters whose
-  default holds a mainland part; draw those with the Taiwan part (`K['雚T']`,
+- **A shared character drawn with the mainland's part.** 獾 took `K['雚']`
+  (the mainland's 艹) as its default, so Traditional text got it too.
+  `hz_forms.py` now fails on it: draw those with the Taiwan part (`K['雚T']`,
   `K['离T']`) and add the shared ones to `_SHARED_TW`.
+- **Pair what differs, not the family's part.** A pair in `_TW_PARTS` says
+  every character writes the part differently. Where one character does,
+  pair its own part: only 釉 has 采 for 釆 in Taiwan (`K['釉旁T']`,
+  `K['釉旁']`), only 蚤 has 㕚 for 叉 (`K['㕚']`, `K['蚤头']`), and 滿's top is
+  卄, not 艹 (`K['卄']`). Paired as 釆 and 叉 themselves, the check listed 番's
+  whole family and 杈 汊 釵, all right as drawn.
+- **A check's noise is a finding.** That list of 36 "deliberate" ones hid
+  three mistakes in the data, none in the 36 drawings: the pairs above, and
+  89 rows of `hanzi_order.tsv` that held a Simplified character in the
+  Traditional column too (`order.py` fell back to the character itself when
+  no Traditional form passed its filter), which made 涝 馍 颧 look shared and
+  left 25 Big5 forms (澇 饃 顴 …) undrawn. Before adding an exception to a
+  check, find out why it fires; fix the data until it prints nothing, then
+  make it fail the build.
+- **Strokes that meet don't cross.** 癶's two 撇 rest on its 捺; drawn through
+  it, 登's top read as an ㄨ until 0.970, in the proof's own first line. Nobody
+  looks hard at a common character. `tools/hz_cross.py` lists a 撇 that
+  crosses an earlier 捺 (run it on the batches); for the rest, look at each
+  new part large (`hz_sheet.py --size 300`) beside the standard, asking of
+  every junction: touch, cross, or apart?
+- **One part, one drawing.** 登, 癸 and 發 each carried their own copy of 癶,
+  so the mistake was in three places and 發's copy differed again. A top or
+  side that two characters share is a `K[...]` part from the second use on.
+- **A fallback is a claim.** "No form found, so use the character itself"
+  said Taiwan writes 线. When a rule finds nothing, write nothing (`-`).
 - **Check only the round's characters at the edges.** `edges.py --batch` with
   no `--chars` draws every character there is (half an hour a font); pass the
   batches' own characters.
@@ -239,6 +266,20 @@ Check, proof and ship them in order.
   every user: one round's `K['贰']` had its 贝 and another's didn't, so the
   second's 贰 would have drawn 贝 twice. Redraw everything that uses a part
   you removed.
+- The reviewer bot reads a pull request once, when it opens, and takes
+  minutes where a build takes an hour. Open every round's pull request as
+  soon as its batches are merged and checked, before the final builds; fix
+  what it finds on the earliest branch that has the character, merge that
+  branch forward, and build each round once. A fix pushed later is not
+  reviewed: check it yourself (the sheet, `hz_count.py`, the standard).
+- Check a claim about a part against the standard, in the browser: zdic's
+  stroke code (1 橫 2 豎 3 撇 4 點 5 折) spells a character's parts in order
+  (痫 ends in 闲's 木, not 间's 日), and 教育部's 筆順學習網 shows Taiwan's.
+  Read them; save nothing.
+- Merging a branch forward conflicts where both sides added `_SHARED_TW`
+  lines: `tools/hz_resolve_shared.py` keeps both. `open_pr.sh` refuses a
+  branch with conflict markers in it. In a script with `set -o pipefail`,
+  `git log | head` fails the script; use `git log -1 | cat`.
 - Once a PR merges, merge `origin/main` into the next branch (a merge commit;
   never rebase a branch others stack on), then run `check_fonts.py` there.
 - Drafting the next round while one builds: load the earlier round's batches
@@ -269,7 +310,10 @@ same way, with the mainland's form where 通用规范汉字表 has it at any lev
 Draw their Traditional forms as Taiwan's 次常用國字標準字體表 writes them. A `-`
 in a column means that script has nothing to draw on that row. Rows 5,490–7,183 are the rest of
 通用规范汉字表's second level (kTGH 3501–6500), with Traditional forms from
-CNS planes 1 and 2.
+CNS planes 1 and 2. Since 0.970 the earlier rows hold those forms too where
+the first plane had none (涝 澇), so `order.py`'s output can add characters
+to rows already drawn: after changing it, `hz_todo.py 1 LAST` must print
+nothing, or the new ones are a batch for the next release.
 `merge_round.py` keeps the README's "Drawn so far" line for the three lists. Any new list needs its source
 and licence checked and recorded in the README first.
 
