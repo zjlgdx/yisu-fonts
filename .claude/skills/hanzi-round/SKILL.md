@@ -177,6 +177,18 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
 - **One part, one drawing.** 登, 癸 and 發 each carried their own copy of 癶,
   so the mistake was in three places and 發's copy differed again. A top or
   side that two characters share is a `K[...]` part from the second use on.
+- **Air between parts.** The first pitfall above, seen from the other side:
+  a part whose ink sits low in its grid (心 from y 330, 皿 from 300), or a
+  top boxed into a rect taller than it needs (卷's 龹 into 0–640), leaves an
+  empty band between the parts. 0.980 closed it in 414 characters. After the
+  sheet, run `tools/hz_balance.py CHARS` on the batch's characters and read
+  its "widest empty band" lists: past about 130 across, lift the lower part's
+  rect until the band is near 70 (its ink top is `y0 + a * (y1 - y0)`, with
+  `a` where the part's ink starts in its own grid).
+- **A top is not a character.** `K['士']` and `K['立']` are drawn in the upper
+  half, for 志 and 音. Alone, beside a left part or at the bottom they were
+  half a character high (士, 位 拉 粒, 笠 竖). Use `K['士全']`, `K['立全']`
+  there, and read `hz_balance.py`'s "least height filled" list.
 - **A fallback is a claim.** "No form found, so use the character itself"
   said Taiwan writes 线. When a rule finds nothing, write nothing (`-`).
 - **Check only the round's characters at the edges.** `edges.py --batch` with
