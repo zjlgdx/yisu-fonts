@@ -168,6 +168,15 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   left 25 Big5 forms (澇 饃 顴 …) undrawn. Before adding an exception to a
   check, find out why it fires; fix the data until it prints nothing, then
   make it fail the build.
+- **Strokes that meet don't cross.** 癶's two 撇 rest on its 捺; drawn through
+  it, 登's top read as an ㄨ for 700 versions, in the proof line itself. Nobody
+  looks hard at a common character. `tools/hz_cross.py` lists a 撇 that
+  crosses an earlier 捺 (run it on the batches); for the rest, look at each
+  new part large (`hz_sheet.py --size 300`) beside the standard, asking of
+  every junction: touch, cross, or apart?
+- **One part, one drawing.** 登, 癸 and 發 each carried their own copy of 癶,
+  so the mistake was in three places and 發's copy differed again. A top or
+  side that two characters share is a `K[...]` part from the second use on.
 - **A fallback is a claim.** "No form found, so use the character itself"
   said Taiwan writes 线. When a rule finds nothing, write nothing (`-`).
 - **Check only the round's characters at the edges.** `edges.py --batch` with
