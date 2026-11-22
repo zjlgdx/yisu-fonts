@@ -232,11 +232,79 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   radical is not where its family's is, and every part that has a commoner
   look-alike, before the sheet.
 
+## Acceptance: what counts as checked
+
+A change is accepted on what a command printed and what a reviewer who did
+not make it saw, never on "looked fine". Until 0.990 the scans were lists to
+read, the sheets were read forty-eight to a page by whoever made the change,
+and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又 on
+冖 in 寢 from a pass that was meant to help. Copy this list and tick it:
+
+```
+- [ ] tools/hz_gate.py --selftest      every seeded defect fails
+- [ ] tools/hz_gate.py [--batch ...]   "no form got worse" (it exits 1 otherwise)
+- [ ] tools/hz_forms.py, tools/hz_cross.py    0 problems
+- [ ] tools/edges.py --chars "$(head -1 OUT.txt)"   cut: none, six fonts
+- [ ] tools/hz_diff.py origin/main OUT  every changed form, before and after
+- [ ] the sheets reviewed by an agent that did not make the change
+- [ ] each finding fixed or answered, the gate green again
+- [ ] tools/hz_gate.py --accept        only now; the .tsv's diff is in the commit
+```
+
+- **The gate measures, the baseline remembers.** `hz_gate.py` measures every
+  form (stroke against stroke between sibling parts at every level, with no
+  pair skipped; level strokes of two parts; the ink's width and height;
+  whether the two scripts' forms are different drawings) and fails when a
+  form is worse than `tools/hz_gate.tsv` says it was. `--where CHARS` says
+  where the closest strokes are. A form that was already tight is debt
+  (`--debt`): it fails only if it gets worse, so old noise cannot hide a new
+  defect, which is what happened to every list before it.
+- **Green before accept.** `--accept` rewrites the baseline, so it would also
+  swallow a regression. Run it only when the gate is green, or when each
+  remaining failure is one you can name in the commit message with its
+  reason (蓍 in 0.990: a pair measured for the first time, not moved).
+- **A check never seen failing proves nothing.** The gate's first self-test
+  passed two of its seeded defects: they were compared with a baseline that
+  already held them. A new check goes in with a seed that it fails on.
+- **Review what changed, all of it, large.** `hz_diff.py` finds every form
+  whose drawing differs from the ref (355 when 41 definitions were touched)
+  and draws twelve to a sheet, before above and after below. The list of what
+  you meant to change is not the list of what changed.
+- **The reviewer did not make the change.** Give a fresh agent the sheets and
+  the questions (parts touching, level strokes read as one bar, a part tiny
+  or squashed, worse than before, the heavy pen closing up), not what the
+  change was for; another model is better still. Its brief forbids writing
+  files and saving reference images. A finding is settled by the gate or a
+  larger render, not by arguing.
+- **A lesson becomes a check.** When something gets past all this, add the
+  measurement to `hz_gate.py` and a seed to its self-test before fixing the
+  glyph. A sentence here is the last resort, for what no script can see.
+
+### Changing a part that is already drawn
+
+A new batch only adds drawings. A change to `K[...]`, or a pass over many
+definitions, redraws characters nobody is looking at.
+
+1. Fix one by hand, and run the gate and `hz_diff.py` on it, before writing
+   the script that does the rest.
+2. Run the script in small brackets (one family at a time) with the gate
+   after each, not once after 123 definitions.
+3. Look for whoever worked around the part (a rect stretched to make up for
+   its size) and fix them in the same change: the gate lists them as
+   "tighter" or "narrower".
+4. A variant of a part in `_TW_PARTS` is itself a pair. An inline redraw
+   loses the mainland form; the gate reports it as "merged".
+
 ## 2. Check the edges, then merge
 
 ```
+.venv/bin/python tools/hz_gate.py --batch work/rN_1.py,work/rN_2.py,...
 .venv/bin/python tools/edges.py --batch work/rN_1.py,work/rN_2.py,...
 ```
+
+The gate first (seconds): it fails on a new drawing whose parts are under
+30 apart or whose level strokes are under 55, and on any older character a
+batch's part made worse. `merge_round.py` runs it again and refuses on red.
 
 It draws every character in all six fonts on the build's own canvas
 (`build.canvas`) and lists any whose ink reaches the edge; fix them first.

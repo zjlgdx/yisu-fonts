@@ -9,6 +9,9 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
   ones (its full report goes to OUT_DIR/fontbakery-FAMILY.txt, one file per
   checkout, so checks can run side by side);
 - each character holds its own script's form of every part (tools/hz_forms.py);
+- no drawing sits worse than the baseline says it did: parts closer, level
+  strokes on each other, ink narrower, the two scripts' forms merged
+  (tools/hz_gate.py, and its --selftest, which must see seeded defects fail);
 - no personal data: emails, home or temp paths, or anything --private matches
   (or the YISU_PRIVATE environment variable), wherever text can live in
   the .otf and .woff2 files: every table but the outlines, the decoded name
@@ -142,6 +145,13 @@ if hits:
 print('== forms (tools/hz_forms.py)', flush=True)
 if subprocess.run([sys.executable, str(Path(__file__).parent / 'hz_forms.py')]).returncode:
     bad.append('forms')
+
+print('== parts (tools/hz_gate.py)', flush=True)
+gate = str(Path(__file__).parent / 'hz_gate.py')
+if subprocess.run([sys.executable, gate, '--selftest']).returncode:
+    bad.append('the parts gate passed a seeded defect')
+if subprocess.run([sys.executable, gate]).returncode:
+    bad.append('parts')
 
 print('== ' + ('FAILED: ' + '; '.join(bad) if bad else 'all passed'))
 sys.exit(1 if bad else 0)
