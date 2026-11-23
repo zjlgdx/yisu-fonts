@@ -252,6 +252,7 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
 - [ ] tools/hz_gate.py --selftest      every seeded defect fails
 - [ ] tools/hz_gate.py [--batch ...]   "no form got worse" (it exits 1 otherwise)
 - [ ] tools/hz_inside.py --selftest, then tools/hz_inside.py [--batch ...]   "nothing new"
+- [ ] tools/hz_ink.py --chars "$(cat OUT.txt)"   "no form joins more" in the three bold pens (OUT.txt from hz_diff.py)
 - [ ] tools/hz_forms.py, tools/hz_cross.py    0 problems
 - [ ] tools/hz_diff.py origin/main OUT  every changed form, before and after
 - [ ] tools/edges.py --chars "$(cat OUT.txt)"   cut: none, six fonts, both scripts' forms
@@ -261,6 +262,7 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
 - [ ] each finding rerun, then fixed or answered; the gate green again
 - [ ] the gate's "moved and still under a floor" list: each fixed or named
 - [ ] tools/hz_gate.py --accept        only now; the .tsv's diff is in the commit
+- [ ] tools/hz_ink.py --accept --chars "$(cat OUT.txt)"   the same for hz_ink.tsv (without --chars: every form, ten minutes)
 ```
 
 - **The gate measures, the baseline remembers.** `hz_gate.py` measures every
@@ -271,6 +273,15 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   where the closest strokes are. A form that was already tight is debt
   (`--debt`): it fails only if it gets worse, so old noise cannot hide a new
   defect, which is what happened to every list before it.
+- **Ink is a third gate.** `hz_gate.py` measures centre lines; two parts 40
+  apart pass it and the bold pens still draw them as one mark. 0.995 and
+  0.996 each had a review panel find this after the gate passed (堯's three
+  土, 火火 on 冖, 辯's middle on its right 辛, 艹 on 罒). `hz_ink.py` draws
+  each of two sibling parts alone, in the character's place and pen, in the
+  three bold pens, and counts the pixels both ink. `--where CHARS` says which
+  strokes join in which pen; `--debt N` lists the forms that share most. Of
+  9,226 forms with parts meant apart, 5,589 joined somewhere when the
+  baseline was first written: that is debt to clear by family, not a floor.
 - **Inside a part is another gate.** `hz_gate.py` compares sibling parts, so
   it cannot see a fault within one list of strokes or between two
   characters. A review of 0.991 by three vendors' models and eleven sheet
