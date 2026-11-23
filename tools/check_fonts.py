@@ -17,7 +17,7 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
   drawing, a line drawn twice, a 點 through a stroke, a 豎提 turned the wrong
   way (tools/hz_inside.py and its --selftest);
 - the ink gate still tells a join from a clear pair (tools/hz_ink.py
-  --selftest; its survey of every form in the bold pens takes ten minutes on
+  --selftest; its survey of every form in the bold pens takes half an hour on
   all cores, so a change runs it with --chars on what it touched);
 - no personal data: emails, home or temp paths, or anything --private matches
   (or the YISU_PRIVATE environment variable), wherever text can live in
@@ -167,7 +167,7 @@ if subprocess.run([sys.executable, inside, '--selftest']).returncode:
 if subprocess.run([sys.executable, inside]).returncode:
     bad.append('inside a part')
 
-# The whole survey draws every form in three pens (ten minutes on all cores):
+# The whole survey draws every form in three pens (about half an hour on all cores):
 # run tools/hz_ink.py --chars on what a change touched. Here, only that it tells.
 print('== ink in the bold pens (tools/hz_ink.py --selftest)', flush=True)
 if subprocess.run([sys.executable, str(Path(__file__).parent / 'hz_ink.py'), '--selftest']).returncode:

@@ -30,10 +30,11 @@ a form new to the list that joins; a pair that was clear in a pen and joins
 there, whatever another pair gained (the pairs are followed by their stroke
 numbers, so one parting never pays for another joining); a pair with a
 quarter more ink in a pen (and RISE more); a pair that newly stands apart
-on paper and joins in ink; a pair that closed to under APART on paper. A
-form redrawn with another stroke count has its strokes renumbered, so it is
-judged by its totals per pen: look at it. Parts drawn to meet are not
-measured here.
+on paper and joins in ink; a pair that closed to under APART on paper,
+also when it was the form's only one. A form redrawn with another stroke
+count has its strokes renumbered: the pairs that kept their numbers are
+judged as before and the rest by the totals per pen, so look at it. Parts
+drawn to meet are not measured here.
 
 It draws every form many times: about half an hour on all cores.
 """
@@ -66,16 +67,20 @@ def siblings(item, lo=0):
 
 
 def apart(item, hanzi, gate):
-    """The sibling pairs ((lo, hi), (lo, hi)) that stand APART or more on paper."""
+    """The sibling pairs ((lo, hi), (lo, hi)) that stand APART or more on
+    paper, and those that stand nearer."""
     strokes = hanzi.flatten(item)
-    out = []
+    out, near = [], set()
     for node in siblings(item)[1]:
         shapes = [gate.shape(strokes[a:b]) for a, b in node]
         for i in range(len(node)):
             for j in range(i + 1, len(node)):
-                if shapes[i] and shapes[j] and gate.pair(shapes[i], shapes[j])[0] >= APART:
-                    out.append((node[i], node[j]))
-    return out
+                if shapes[i] and shapes[j]:
+                    if gate.pair(shapes[i], shapes[j])[0] >= APART:
+                        out.append((node[i], node[j]))
+                    else:
+                        near.add((node[i], node[j]))
+    return out, near
 
 
 def grow(m, np, n=1):
@@ -143,7 +148,8 @@ def shared(ch, form, pairs, hanzi, build, np):
 
 
 def work(job):
-    """{(form, ch): (strokes, {pair: ink per pen})} for the forms with a pair meant apart."""
+    """{(form, ch): (strokes, {pair: ink per pen}, pairs nearer than APART)}
+    for every form asked for, also one with no pair meant apart."""
     batch, keys = job
     H = _repo.load(batch)
     import numpy as np
@@ -154,9 +160,8 @@ def work(job):
     for f, ch in keys:
         form = int(f == 'S')
         item = (H.C, H.ZHS)[form][ch]
-        pairs = apart(item, hanzi, hz_gate)
-        if pairs:
-            out[f, ch] = (len(hanzi.flatten(item)), shared(ch, form, pairs, hanzi, build, np))
+        pairs, near = apart(item, hanzi, hz_gate)
+        out[f, ch] = (len(hanzi.flatten(item)), shared(ch, form, pairs, hanzi, build, np) if pairs else {}, near)
     return out
 
 
@@ -200,7 +205,7 @@ def read_base():
                     who, v = col.split('=')
                     p, q = (tuple(int(x) for x in r.split('-')) for r in who.split(':'))
                     pairs[p, q] = tuple(int(x) for x in v.split(','))
-                base[f, ch] = (int(n), pairs)
+                base[f, ch] = (int(n), pairs, set())
     return base
 
 
@@ -210,33 +215,36 @@ def said(pq):
 
 
 def judge(now, was):
-    """Why this form fails. now and was are (strokes, {pair: ink per pen});
-    was is None when the form is not in the baseline."""
-    n, pairs = now
+    """Why this form fails. now and was are (strokes, {pair: ink per pen},
+    pairs nearer than APART); was is None when the form is not in the baseline."""
+    n, pairs, near = now
     if was is None:
         t = totals(pairs)
         return ('new: joined in ' + ', '.join(f'{k} {j}' for k, j in zip(STYLES, t[:3]) if j)) if any(t[:3]) else None
+    same = n == was[0]
     why = []
-    if n != was[0]:
-        # the strokes were renumbered, so no pair can be followed: the totals are what is left
+    for pq, v in sorted(pairs.items()):
+        old = was[1].get(pq)
+        for i, key in enumerate(STYLES):
+            if v[i] and old is None:
+                if same:
+                    why.append(f'{said(pq)}, apart on paper now, join in {key}')
+            elif v[i] and not old[i]:
+                why.append(f'{said(pq)} join in {key}')
+            elif old is not None and v[i] > old[i] * 1.25 and v[i] - old[i] > RISE:
+                why.append(f'{said(pq)} in {key}: ink between {old[i]} -> {v[i]}')
+    if same:
+        # a pair regrouped into other parts is gone too, but is not in `near`
+        for pq in sorted(set(was[1]) & near):
+            why.append(f'{said(pq)} are under {APART} apart on paper now')
+    else:
+        # the strokes were renumbered: pairs that kept their numbers are judged above, the rest by the totals
         t, w = totals(pairs), totals(was[1])
         for i, key in enumerate(STYLES):
             if t[i] > w[i]:
                 why.append(f'{key}: pairs joined {w[i]} -> {t[i]}')
             elif t[3 + i] > w[3 + i] * 1.25 and t[3 + i] - w[3 + i] > RISE:
                 why.append(f'{key}: ink between parts {w[3 + i]} -> {t[3 + i]}')
-        return '; '.join(why) or None
-    for pq, v in sorted(pairs.items()):
-        old = was[1].get(pq)
-        for i, key in enumerate(STYLES):
-            if v[i] and old is None:
-                why.append(f'{said(pq)}, apart on paper now, join in {key}')
-            elif v[i] and not old[i]:
-                why.append(f'{said(pq)} join in {key}')
-            elif old is not None and v[i] > old[i] * 1.25 and v[i] - old[i] > RISE:
-                why.append(f'{said(pq)} in {key}: ink between {old[i]} -> {v[i]}')
-    for pq in sorted(set(was[1]) - set(pairs)):
-        why.append(f'{said(pq)} are under {APART} apart on paper now')
     return '; '.join(why) or None
 
 
@@ -252,25 +260,25 @@ def selftest():
         print(f'  {label}: {shown or got}' + ('' if got == want else '  <- WRONG'))
         bad += got != want
 
-    a = np.array([[1, 0, 0, 0]], bool)
+    a = np.array([[1, 0, 0]], bool)
     b = a[:, ::-1]
-    check('ink with white between', reaches(a, b, a | b, np), False)
-    check('ink that only the joint drawing bridges', reaches(a, b, np.ones((1, 4), bool), np), True)
+    check('ink with one white cell between', reaches(a, b, a | b, np), False)
+    check('ink that only the joint drawing bridges', reaches(a, b, np.ones((1, 3), bool), np), True)
     check('ink that overlaps', reaches(a | b, b, a | b, np), True)
 
     def measure(item, form='C'):
         (H.ZHS if form == 'S' else H.C)[SEED] = item
         if form == 'S':
             H.C[SEED] = [('E', 'M100 500 L900 500')]
-        got = work(('', [(form, SEED)])).get((form, SEED))
+        got = work(('', [(form, SEED)]))[form, SEED]
         H.C.pop(SEED, None)
         H.ZHS.pop(SEED, None)
         return got
 
     def told(label, item, want, form='C'):
         got = measure(item, form)
-        if got is None:
-            return check(label, 'not measured', want)
+        if not got[1]:
+            return check(label, 'not measured', 'measured')
         pens = totals(got[1])[:3]
         check(label, all(bool(g) == want for g in pens), True,
               ' '.join(f'{k} {"joined" if g else "apart"}' for k, g in zip(STYLES, pens)))
@@ -290,19 +298,23 @@ def selftest():
     left, right, wide = measure(ups(300, 340, 800)), measure(ups(300, 760, 800)), measure(ups(180, 500, 900))
     check('verdict, one pair parted and another joined', bool(judge(right, left)), True)
     check('verdict, a clear pair closed to under APART', bool(judge(measure(ups(180, 200, 900)), wide)), True)
+    check('verdict, the only pair closed to under APART', bool(judge(measure(ups(180, 200)), measure(ups(180, 500)))), True)
+    check('verdict, the same strokes grouped another way', bool(judge(measure(('box', [(ups(180, 500), full), (up(900), full)])), wide)), False)
+    check('印泥 closes two uprights 120 apart (only the joint drawing has it)', bool(measure(ups(300, 420))[1][(0, 1), (1, 2)][0]), True)
     P, Q = ((0, 2), (2, 5)), ((2, 5), (5, 7))
-    was = (7, {P: (40, 0, 90), Q: (0, 0, 0)})
-    for label, now, want in (('the same', was, False), ('nothing joined', (7, {P: (0, 0, 0), Q: (0, 0, 0)}), False),
-                             ('the clear pair joins in a pen', (7, {P: (40, 0, 90), Q: (0, 5, 0)}), True),
-                             ('one pair parts, the other joins', (7, {P: (0, 0, 0), Q: (40, 0, 90)}), True),
-                             ('a quarter more ink in a pen', (7, {P: (40, 0, 130), Q: (0, 0, 0)}), True),
-                             ('a little more ink', (7, {P: (44, 0, 95), Q: (0, 0, 0)}), False),
-                             ('a new pair that joins', (7, {P: (40, 0, 90), Q: (0, 0, 0), ((0, 2), (5, 7)): (9, 0, 0)}), True),
-                             ('redrawn with a stroke more, no worse in all', (8, {((0, 3), (3, 6)): (30, 0, 80)}), False),
-                             ('redrawn with a stroke more, a pen worse', (8, {((0, 3), (3, 6)): (30, 4, 80)}), True)):
+    was = (7, {P: (40, 0, 90), Q: (0, 0, 0)}, set())
+    for label, now, want in (('the same', was, False), ('nothing joined', (7, {P: (0, 0, 0), Q: (0, 0, 0)}, set()), False),
+                             ('the clear pair joins in a pen', (7, {P: (40, 0, 90), Q: (0, 5, 0)}, set()), True),
+                             ('one pair parts, the other joins', (7, {P: (0, 0, 0), Q: (40, 0, 90)}, set()), True),
+                             ('a quarter more ink in a pen', (7, {P: (40, 0, 130), Q: (0, 0, 0)}, set()), True),
+                             ('a little more ink', (7, {P: (44, 0, 95), Q: (0, 0, 0)}, set()), False),
+                             ('a pair joins while a stroke is added after it', (8, {P: (0, 0, 0), Q: (40, 0, 90)}, set()), True),
+                             ('a new pair that joins', (7, {P: (40, 0, 90), Q: (0, 0, 0), ((0, 2), (5, 7)): (9, 0, 0)}, set()), True),
+                             ('redrawn with a stroke more, no worse in all', (8, {((0, 3), (3, 6)): (30, 0, 80)}, set()), False),
+                             ('redrawn with a stroke more, a pen worse', (8, {((0, 3), (3, 6)): (30, 4, 80)}, set()), True)):
         check(f'verdict, {label}', bool(judge(now, was)), want)
-    check('verdict, a new form that joins', bool(judge((2, {P: (0, 8, 0)}), None)), True)
-    check('verdict, a new form that is clear', bool(judge((2, {P: (0, 0, 0)}), None)), False)
+    check('verdict, a new form that joins', bool(judge((2, {P: (0, 8, 0)}, set()), None)), True)
+    check('verdict, a new form that is clear', bool(judge((2, {P: (0, 0, 0)}, set()), None)), False)
     return bad
 
 
@@ -325,8 +337,8 @@ def main():
     if a.where:
         got = survey(a.batch, set(a.where))
         if not got:
-            sys.exit('none of these is drawn with parts meant apart')
-        for (f, ch), (n, pairs) in sorted(got.items(), key=lambda kv: a.where.index(kv[0][1])):
+            sys.exit('none of these is drawn')
+        for (f, ch), (n, pairs, _) in sorted(got.items(), key=lambda kv: a.where.index(kv[0][1])):
             t = totals(pairs)
             print(f'{name(ch, f)}: {sum(t[:3])} joined' if any(t[:3]) else f'{name(ch, f)}: nothing joined')
             for pq, v in sorted(pairs.items()):
@@ -334,33 +346,34 @@ def main():
                     if cells:
                         print(f'   {key} bold: {said(pq)} of {n}, {cells} cells of ink between')
         return
+    if a.accept and a.batch:
+        sys.exit('--accept is for what is merged: run it without --batch')
     measured = a.chars is not None or bool(a.batch) or a.accept or not a.debt
     now = survey(a.batch, set(a.chars) if a.chars is not None else None, a.jobs) if measured else read_base()
     if a.chars is not None and not now:
-        sys.exit('--chars: none of these is drawn with parts meant apart (an empty or mangled list?)')
+        sys.exit('--chars: none of these is drawn (an empty or mangled list?)')
     if a.accept:
-        if a.batch:
-            sys.exit('--accept is for what is merged: run it without --batch')
         rows = dict(now) if a.chars is None else {**{k: v for k, v in read_base().items() if k[1] not in a.chars}, **now}
+        rows = {k: v for k, v in rows.items() if v[1]}
         BASE.write_text('# tools/hz_ink.py --accept. form (C Taiwan/shared, S mainland), character, strokes, then each pair of '
                         'parts meant apart (strokes lo-hi:lo-hi, counted from 0, hi not included) = cells of ink between them in the bold '
                         + ', '.join(STYLES) + ' pens (0: they stand clear)\n'
-                        + ''.join(row(f, ch, n, pairs) + '\n' for (f, ch), (n, pairs) in sorted(rows.items())), encoding='utf-8')
-        joined = sum(1 for _, pairs in rows.values() if any(totals(pairs)[:3]))
+                        + ''.join(row(f, ch, n, pairs) + '\n' for (f, ch), (n, pairs, _) in sorted(rows.items())), encoding='utf-8')
+        joined = sum(1 for _, pairs, _ in rows.values() if any(totals(pairs)[:3]))
         print(f'baseline written: {len(rows)} forms with parts meant apart, {joined} join' + ('' if a.chars is None else f'; {len(now)} measured again'))
         return
     if a.debt:
-        worst = sorted(((sum(t[3:]), sum(t[:3]), f, ch) for (f, ch), (_, pairs) in now.items()
+        worst = sorted(((sum(t[3:]), sum(t[:3]), f, ch) for (f, ch), (_, pairs, _) in now.items()
                         for t in [totals(pairs)] if any(t[:3])), reverse=True)
         print(f'{len(worst)} forms join in a bold pen' + ('' if measured else ' (the baseline)') + f'; the {min(a.debt, len(worst))} with most ink between parts:')
         print('  ' + '  '.join(f'{name(ch, f)} {j}/{p}' for p, j, f, ch in worst[:a.debt]))
         return
     base = read_base()
     fails = [(name(ch, f), why) for (f, ch), m in sorted(now.items()) for why in [judge(m, base.get((f, ch)))] if why]
-    better = [name(ch, f) for (f, ch), (_, pairs) in sorted(now.items())
+    better = [name(ch, f) for (f, ch), (_, pairs, _) in sorted(now.items())
               if (f, ch) in base and sum(totals(pairs)[:3]) < sum(totals(base[f, ch][1])[:3])]
-    joined = sum(1 for _, pairs in now.values() if any(totals(pairs)[:3]))
-    print(f'drawn {len(now)} forms with parts meant apart in the three bold pens: {joined} join'
+    joined = sum(1 for _, pairs, _ in now.values() if any(totals(pairs)[:3]))
+    print(f'drawn {len(now)} forms in the three bold pens: {joined} join'
           + (f' ({len(base)} forms in the baseline)' if a.chars is None else ''))
     if better:
         print(f'  join less than the baseline ({len(better)}): ' + ''.join(better[:80]))
