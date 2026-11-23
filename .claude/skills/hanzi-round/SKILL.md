@@ -255,12 +255,14 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
 - [ ] tools/hz_forms.py, tools/hz_cross.py    0 problems
 - [ ] tools/hz_diff.py origin/main OUT  every changed form, before and after
 - [ ] tools/edges.py --chars "$(cat OUT.txt)"   cut: none, six fonts, both scripts' forms
+- [ ] tools/hz_ink.py --chars "$(cat OUT.txt)"   "no form joins more" in the three bold pens; it fails on an empty list
 - [ ] the sheets reviewed by an agent that did not make the change
 - [ ] the whole change reviewed on another vendor's model; and the tools too,
       if a tool changed ("Having the checks reviewed", below)
 - [ ] each finding rerun, then fixed or answered; the gate green again
 - [ ] the gate's "moved and still under a floor" list: each fixed or named
 - [ ] tools/hz_gate.py --accept        only now; the .tsv's diff is in the commit
+- [ ] tools/hz_ink.py --accept --chars "$(cat OUT.txt)"   the same for hz_ink.tsv (without --chars: every form, about half an hour)
 ```
 
 - **The gate measures, the baseline remembers.** `hz_gate.py` measures every
@@ -271,6 +273,23 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   where the closest strokes are. A form that was already tight is debt
   (`--debt`): it fails only if it gets worse, so old noise cannot hide a new
   defect, which is what happened to every list before it.
+- **Ink is a third gate.** `hz_gate.py` measures centre lines; two parts 40
+  apart pass it and the bold pens still draw them as one mark. 0.995 and
+  0.996 each had a review panel find this after the gate passed (堯's three
+  土, 火火 on 冖, 辯's middle on its right 辛, 艹 on 罒). `hz_ink.py` draws
+  two sibling parts together and each alone, in the character's place and
+  pen, in the three bold pens, and says whether ink of the one reaches ink
+  of the other. Draw them together: 印泥 blurs the whole drawing before it
+  cuts it, so two marks that never touch alone can close up. It follows each
+  pair by its stroke numbers, so one pair parting never pays for another
+  joining, and the baseline is what main draws: compare a change against
+  it before `--accept`, never write it from the change. `--where CHARS`
+  says which strokes join in which pen; `--debt N` lists the forms with most
+  ink between parts. The bold pens are 70 and more wide in a form of
+  fourteen strokes, so bars 67 apart on paper (鼻's 自 on 田) still join:
+  most of the baseline is that, a matter of the pens' weight in dense forms
+  and not of one drawing. Widen a gap where a form reads wrong; do not chase
+  the count form by form.
 - **Inside a part is another gate.** `hz_gate.py` compares sibling parts, so
   it cannot see a fault within one list of strokes or between two
   characters. A review of 0.991 by three vendors' models and eleven sheet
