@@ -172,6 +172,8 @@ def line_length(strokes):
                 to = [cur[0] + v[0], cur[1] + v[1]] if cmd == 'l' else v
                 if cmd != 'M':
                     total += math.dist(cur, to)
+                else:
+                    cmd = 'L'       # pairs after the first of an M are lines to
                 cur = to
     return total / 1000
 
@@ -184,7 +186,8 @@ def density_scale(ch, strokes, bold=False, family=None):
     7 to 10 strokes keep the pen as it is. Kana and punctuation are left alone.
 
     A family's Bold may also narrow by how much line the form has (the cut's
-    `dense`), whichever is narrower. Strokes do not say how full a form is:
+    `dense`): the narrower of the two rules is used, and a form of few
+    strokes and much line (而) keeps its share of the widening. Strokes do not say how full a form is:
     邊 has nineteen and 5.3 ems of line, 彈 fifteen and 6.6, and it is 彈 that
     the broad pen fills."""
     cp = ord(ch)
@@ -200,8 +203,7 @@ def density_scale(ch, strokes, bold=False, family=None):
     if dense:
         depth, lo, hi = dense
         thin = 1.0 - depth * ease(lo, hi, line_length(strokes))
-        if thin < 1.0:
-            scale = min(scale, thin)
+        scale = scale * thin if n <= 6 else min(scale, thin)
     return scale
 
 
