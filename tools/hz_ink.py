@@ -2,11 +2,11 @@
 """The gate on ink: parts that stand apart on paper and join under the bold pens.
 
     tools/hz_ink.py                  exit 1 when a form joins more than the baseline says
-    tools/hz_ink.py --chars 辯蔑      only these (what a change touched)
+    tools/hz_ink.py --chars 辯蔑      only these (what a change touched); fails when none is drawn
     tools/hz_ink.py --accept         write the baseline (tools/hz_ink.tsv); with --chars, only their rows
-    tools/hz_ink.py --debt 60        the forms that join most today
+    tools/hz_ink.py --debt 60        the forms that join most (from the baseline; measured with --chars or --batch)
     tools/hz_ink.py --where 辯蔑      which parts join, in which pen
-    tools/hz_ink.py --selftest       seed a join and a clear pair; each must be told
+    tools/hz_ink.py --selftest       seeded joins and clear pairs, and the verdicts; each must be told
 
 hz_gate.py measures centre lines. Two parts 40 apart pass it, and the bold
 pens, 30 and more wide, still draw them as one mark: 0.995 and 0.996 each
@@ -14,17 +14,22 @@ had a review panel find 堯's three 土, 火火 on 冖, the middle of 辯 on its
 right 辛 and 艹 on 罒 this way, after the gate had passed them.
 
 For every node of a drawing (box, lr, tb), each pair of sibling parts whose
-centre lines are APART or more from each other is meant to stand apart. Each
-of the two is drawn alone, in the whole character's place, with its pen
-width and its hand, in the three bold pens; the pixels both ink are counted.
-A pair that shares MIN or more in a pen is joined there.
+centre lines are APART or more from each other is meant to stand apart. In
+each of the three bold pens the two are drawn together, with nothing else,
+in the whole character's place, pen width and hand, and each alone. The
+pair is joined in that pen when ink of the one reaches ink of the other
+through the drawing of both: the pens are not sums of their strokes (印泥
+blurs the whole drawing before it cuts it, so two marks 120 apart can close
+up though neither alone reaches the other), which is why the two are drawn
+together. How much is the ink of that drawing within REACH of both parts.
 
-Kept per form: joined (pairs times pens) and the pixels shared. Fails,
-against the baseline: a form new to the list, more joined than before, or
-half as many pixels again (and 500 more). Parts that are drawn to meet
-(under APART on paper) are hz_gate's to judge, not this tool's.
+Kept per form and pen: pairs joined, and that ink. Fails, against the
+baseline: a form new to the list, more pairs joined in a pen, or a quarter
+more ink in a pen (and RISE more). A pair that closes to under APART on
+paper leaves this tool's count and is hz_gate's to fail ("tighter"), so run
+both. Parts drawn to meet are not measured here.
 
-It draws every form several times: about ten minutes on all cores.
+It draws every form many times: about half an hour on all cores.
 """
 import argparse
 import sys
@@ -34,9 +39,10 @@ import _repo
 
 BASE = Path(__file__).with_name('hz_ink.tsv')
 APART = 25      # centre lines this far apart are two marks on paper
-MIN = 50        # shared pixels under this are a kiss of the pen's jitter
+REACH = 3       # cells; ink within this of both parts lies between them
+RISE = 15       # cells of ink a pen must gain before a quarter more fails
 STYLES = ('yinni', 'huasha', 'louhen')
-SEED = '�'
+SEED = '\ufffd'
 
 
 def siblings(item, lo=0):
@@ -66,30 +72,62 @@ def apart(item, hanzi, gate):
     return out
 
 
+def grow(m, np, n=1):
+    """A mask grown by n cells, up, down and sideways."""
+    for _ in range(n):
+        g = m.copy()
+        g[1:] |= m[:-1]
+        g[:-1] |= m[1:]
+        g[:, 1:] |= m[:, :-1]
+        g[:, :-1] |= m[:, 1:]
+        m = g
+    return m
+
+
+def reaches(a, b, ink, np):
+    """Whether ink of a reaches ink of b through `ink` (the two drawn together)."""
+    if (a & b).any():
+        return True
+    seen = a & ink
+    target = b & ink
+    n = int(seen.sum())
+    while n:
+        seen = grow(seen, np, 6) & ink
+        if (seen & target).any():
+            return True
+        m = int(seen.sum())
+        if m == n:
+            return False
+        n = m
+    return False
+
+
 def shared(ch, form, pairs, hanzi, build, np):
-    """[(pair, pen, pixels)] for the pairs that share MIN or more."""
+    """[(pair, pen, cells)] for the pairs joined in a pen. A cell is two grid
+    units square."""
     from unittest.mock import patch
     table = (hanzi.C, hanzi.ZHS)[form]
     whole = hanzi.flatten(table[ch])
     real = hanzi.placed
+    cell = max(1, round(2 * build.S))
     out = []
     for key in STYLES:
         st = build.STYLES[key](bold=True)
         scale = hanzi.density_scale(ch, whole, True)
         masks = {}
 
-        def mask(rng):
-            if rng not in masks:
+        def mask(*rngs):
+            if rngs not in masks:
                 def some(*a, **kw):
                     strokes, warp, r = real(*a, **kw)
-                    return strokes[rng[0]:rng[1]], warp, r
+                    return [s for lo, hi in rngs for s in strokes[lo:hi]], warp, r
                 with patch.object(hanzi, 'placed', some), patch.object(hanzi, 'density_scale', return_value=scale):
-                    masks[rng] = np.asarray(st.draw(ch, build.canvas(st, ch), form)) > 127
-            return masks[rng]
+                    masks[rngs] = np.asarray(st.draw(ch, build.canvas(st, ch), form).reduce(cell)) > 64
+            return masks[rngs]
         for p, q in pairs:
-            n = int(np.count_nonzero(mask(p) & mask(q)))
-            if n >= MIN:
-                out.append(((p, q), key, n))
+            a, b, both = mask(p), mask(q), mask(p, q)
+            if reaches(a, b, both, np):
+                out.append(((p, q), key, max(1, int(np.count_nonzero(both & grow(a, np, REACH) & grow(b, np, REACH))))))
     return out
 
 
@@ -106,7 +144,8 @@ def work(job):
         pairs = apart((H.C, H.ZHS)[form][ch], hanzi, hz_gate)
         if pairs:
             hits = shared(ch, form, pairs, hanzi, build, np)
-            out[f, ch] = (len(hits), sum(n for _, _, n in hits), hits)
+            out[f, ch] = (tuple(sum(1 for _, k, _ in hits if k == key) for key in STYLES)
+                          + tuple(sum(n for _, k, n in hits if k == key) for key in STYLES), hits)
     return out
 
 
@@ -134,22 +173,24 @@ def read_base():
     if BASE.exists():
         for line in BASE.read_text(encoding='utf-8').splitlines():
             if line and not line.startswith('#'):
-                f, ch, joined, px = line.split('\t')
-                base[f, ch] = (int(joined), int(px))
+                f, ch, *n = line.split('\t')
+                base[f, ch] = tuple(int(v) for v in n)
     return base
 
 
 def judge(now, was):
-    joined, px = now[:2]
-    if not joined:
+    """Why this form fails: now and was are (joined per pen x3, ink per pen x3); was None when it is not in the baseline."""
+    if not any(now[:3]):
         return None
     if was is None:
-        return f'new: {joined} joined, {px} pixels shared'
-    if joined > was[0]:
-        return f'joined {was[0]} -> {joined}'
-    if px > was[1] * 1.5 and px - was[1] > 500:
-        return f'pixels shared {was[1]} -> {px}'
-    return None
+        return 'new: joined in ' + ', '.join(f'{k} {j}' for k, j in zip(STYLES, now[:3]) if j)
+    why = []
+    for i, key in enumerate(STYLES):
+        if now[i] > was[i]:
+            why.append(f'{key}: pairs joined {was[i]} -> {now[i]}')
+        elif now[3 + i] > was[3 + i] * 1.25 and now[3 + i] - was[3 + i] > RISE:
+            why.append(f'{key}: ink between parts {was[3 + i]} -> {now[3 + i]}')
+    return '; '.join(why) or None
 
 
 def selftest():
@@ -157,13 +198,42 @@ def selftest():
     import hanzi
     full = (0, 0, 1000, 1000)
     bad = 0
-    for gap, want in ((40, True), (300, False)):
-        H.C[SEED] = ('box', [([('E', 'M300 150 L300 850')], full), ([('E', f'M{300 + gap} 150 L{300 + gap} 850')], full)])
-        got = bool(work(('', [('C', SEED)])).get(('C', SEED), (0,))[0])
-        print(f'  two uprights {gap} apart: {"joined" if got else "apart"}' + ('' if got == want else '  <- WRONG'))
+
+    def told(label, item, want, form='C'):
+        nonlocal bad
+        (H.ZHS if form == 'S' else H.C)[SEED] = item
+        if form == 'S':
+            H.C[SEED] = [('E', 'M100 500 L900 500')]
+        got = work(('', [(form, SEED)])).get((form, SEED), ((0,) * 6, []))[0][:3]
+        H.C.pop(SEED, None)
+        H.ZHS.pop(SEED, None)
+        ok = all(bool(g) == want for g in got)
+        print(f'  {label}: ' + ' '.join(f'{k} {"joined" if g else "apart"}' for k, g in zip(STYLES, got)) + ('' if ok else '  <- WRONG'))
+        bad += not ok
+
+    def up(x):
+        return [('E', f'M{x} 150 L{x} 850')]
+    told('two uprights 40 apart, a box', ('box', [(up(300), full), (up(340), full)]), True)
+    told('two uprights 300 apart, a box', ('box', [(up(300), full), (up(600), full)]), False)
+    told('two uprights 40 apart, lr', ('lr', up(960), up(60), 0.5), True)
+    told('two bars 40 apart, tb', ('tb', [('E', 'M150 960 L850 960')], [('E', 'M150 40 L850 40')], 0.5), True)
+    told('two uprights 40 apart, nested', ('box', [(('box', [(up(300), full), (up(340), full)]), full), (up(800), full)]), True)
+    told('two uprights 40 apart, a mainland form', ('box', [(up(300), full), (up(340), full)]), True, 'S')
+    assert SEED not in hanzi.C and SEED not in hanzi.ZHS
+    was = (1, 0, 2, 40, 0, 90)
+    for label, now, want in (('the same', was, False), ('nothing joined', (0,) * 6, False),
+                             ('one more pair in a pen', (1, 1, 2, 40, 5, 90), True),
+                             ('one pen better, another worse', (0, 0, 3, 0, 0, 90), True),
+                             ('a quarter more ink in a pen', (1, 0, 2, 40, 0, 130), True),
+                             ('a little more ink', (1, 0, 2, 44, 0, 95), False),
+                             ('less ink', (1, 0, 1, 20, 0, 30), False)):
+        got = bool(judge(now, was))
+        print(f'  verdict, {label}: {"fails" if got else "passes"}' + ('' if got == want else '  <- WRONG'))
         bad += got != want
-    del H.C[SEED]
-    assert SEED not in hanzi.C
+    for label, now, want in (('a new form that joins', (0, 1, 0, 0, 8, 0), True), ('a new form that is clear', (0,) * 6, False)):
+        got = bool(judge(now, None))
+        print(f'  verdict, {label}: {"fails" if got else "passes"}' + ('' if got == want else '  <- WRONG'))
+        bad += got != want
     return bad
 
 
@@ -186,31 +256,38 @@ def main():
     if a.where:
         H = _repo.load(a.batch)
         import hanzi
-        for (f, ch), (joined, px, hits) in sorted(survey(a.batch, set(a.where)).items(), key=lambda kv: a.where.index(kv[0][1])):
+        got = survey(a.batch, set(a.where))
+        if not got:
+            sys.exit('none of these is drawn with parts meant apart')
+        for (f, ch), (m, hits) in sorted(got.items(), key=lambda kv: a.where.index(kv[0][1])):
             strokes = hanzi.flatten((H.C, H.ZHS)[f == 'S'][ch])
-            print(f'{name(ch, f)}: {joined} joined, {px} pixels' if joined else f'{name(ch, f)}: nothing joined')
+            print(f'{name(ch, f)}: {sum(m[:3])} joined' if any(m[:3]) else f'{name(ch, f)}: nothing joined')
             for ((a0, a1), (b0, b1)), key, n in hits:
-                print(f'   {key} bold: strokes {a0 + 1}-{a1} and {b0 + 1}-{b1} of {len(strokes)} share {n}')
+                print(f'   {key} bold: strokes {a0 + 1}-{a1} and {b0 + 1}-{b1} of {len(strokes)}, {n} cells of ink between')
         return
-    now = survey(a.batch, set(a.chars) if a.chars is not None else None, a.jobs)
+    measured = a.chars is not None or bool(a.batch) or a.accept or not a.debt
+    now = {k: v[0] for k, v in survey(a.batch, set(a.chars) if a.chars is not None else None, a.jobs).items()} if measured else read_base()
+    if a.chars is not None and not now:
+        sys.exit('--chars: none of these is drawn with parts meant apart (an empty or mangled list?)')
     if a.accept:
         if a.batch:
             sys.exit('--accept is for what is merged: run it without --batch')
         kept = {} if a.chars is None else {k: v for k, v in read_base().items() if k[1] not in a.chars}
-        rows = sorted([(f, ch, m[0], m[1]) for (f, ch), m in now.items() if m[0]] + [(f, ch, j, p) for (f, ch), (j, p) in kept.items()])
-        BASE.write_text('# tools/hz_ink.py --accept. form (C Taiwan/shared, S mainland), character, joined (pairs x bold pens), pixels shared\n'
-                        + ''.join(f'{f}\t{ch}\t{j}\t{p}\n' for f, ch, j, p in rows), encoding='utf-8')
+        rows = sorted([(f, ch) + m for (f, ch), m in now.items() if any(m[:3])] + [(f, ch) + m for (f, ch), m in kept.items()])
+        BASE.write_text('# tools/hz_ink.py --accept. form (C Taiwan/shared, S mainland), character, pairs joined in the bold '
+                        + ', '.join(STYLES) + ' pens, cells of ink between the joined parts in each\n'
+                        + ''.join('\t'.join(map(str, r)) + '\n' for r in rows), encoding='utf-8')
         print(f'baseline written: {len(rows)} forms join' + (f', of {len(now)} with parts meant apart' if a.chars is None else f'; {len(now)} measured again'))
         return
     if a.debt:
-        worst = sorted(((m[1], m[0], f, ch) for (f, ch), m in now.items() if m[0]), reverse=True)
-        print(f'{len(worst)} forms join in a bold pen; the {min(a.debt, len(worst))} that share most:')
+        worst = sorted(((sum(m[3:]), sum(m[:3]), f, ch) for (f, ch), m in now.items() if any(m[:3])), reverse=True)
+        print(f'{len(worst)} forms join in a bold pen' + ('' if measured else ' (the baseline)') + f'; the {min(a.debt, len(worst))} with most ink between parts:')
         print('  ' + '  '.join(f'{name(ch, f)} {j}/{p}' for p, j, f, ch in worst[:a.debt]))
         return
     base = read_base()
     fails = [(name(ch, f), why) for (f, ch), m in sorted(now.items()) for why in [judge(m, base.get((f, ch)))] if why]
-    better = [name(ch, f) for (f, ch), m in sorted(now.items()) if (f, ch) in base and m[0] < base[f, ch][0]]
-    joined = sum(1 for m in now.values() if m[0])
+    better = [name(ch, f) for (f, ch), m in sorted(now.items()) if (f, ch) in base and sum(m[:3]) < sum(base[f, ch][:3])]
+    joined = sum(1 for m in now.values() if any(m[:3]))
     print(f'drawn {len(now)} forms with parts meant apart in the three bold pens: {joined} join'
           + (f' ({len(base)} in the baseline)' if a.chars is None else ''))
     if better:
