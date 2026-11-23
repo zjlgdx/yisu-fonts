@@ -280,7 +280,10 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   two sibling parts together and each alone, in the character's place and
   pen, in the three bold pens, and says whether ink of the one reaches ink
   of the other. Draw them together: 印泥 blurs the whole drawing before it
-  cuts it, so two marks that never touch alone can close up. `--where CHARS`
+  cuts it, so two marks that never touch alone can close up. It follows each
+  pair by its stroke numbers, so one pair parting never pays for another
+  joining, and the baseline is what main draws: compare a change against
+  it before `--accept`, never write it from the change. `--where CHARS`
   says which strokes join in which pen; `--debt N` lists the forms with most
   ink between parts. The bold pens are 70 and more wide in a form of
   fourteen strokes, so bars 67 apart on paper (鼻's 自 on 田) still join:
