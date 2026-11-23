@@ -4,6 +4,7 @@
     tools/hz_ink.py                  exit 1 when a form joins more than the baseline says
     tools/hz_ink.py --chars 辯蔑      only these (what a change touched); fails when none is drawn
     tools/hz_ink.py --accept         write the baseline (tools/hz_ink.tsv); with --chars, only their rows
+                                     (it names the forms that join more than the old baseline said)
     tools/hz_ink.py --debt 60        the forms that join most (from the baseline; measured with --chars or --batch)
     tools/hz_ink.py --where 辯蔑      which parts join, in which pen
     tools/hz_ink.py --selftest       seeded joins and clear pairs, and the verdicts; each must be told
@@ -129,7 +130,7 @@ def shared(ch, form, pairs, hanzi, build, np):
     out = {pq: [] for pq in pairs}
     for key in STYLES:
         st = build.STYLES[key](bold=True)
-        scale = hanzi.density_scale(ch, whole, True)
+        scale = hanzi.density_scale(ch, whole, True, key)
         masks = {}
 
         def mask(*rngs):
@@ -355,6 +356,10 @@ def main():
     if a.accept:
         rows = dict(now) if a.chars is None else {**{k: v for k, v in read_base().items() if k[1] not in a.chars}, **now}
         rows = {k: v for k, v in rows.items() if v[1]}
+        was = read_base()
+        worse = [name(ch, f) for (f, ch), m in sorted(now.items()) if judge(m, was.get((f, ch)))]
+        if worse:
+            print(f'accepted though they join more than the baseline did ({len(worse)}): ' + ''.join(worse[:200]))
         BASE.write_text('# tools/hz_ink.py --accept. form (C Taiwan/shared, S mainland), character, strokes, then each pair of '
                         'parts meant apart (strokes lo-hi:lo-hi, counted from 0, hi not included) = cells of ink between them in the bold '
                         + ', '.join(STYLES) + ' pens (0: they stand clear)\n'
