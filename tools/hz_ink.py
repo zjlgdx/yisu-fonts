@@ -238,7 +238,7 @@ def judge(now, was):
     for pq, v in sorted({**near, **pairs}.items()):
         old = was[1].get(pq, was[2].get(pq))
         if old is None:
-            if same and pq in pairs and any(v):
+            if same and any(v):
                 # not two parts in the baseline: these strokes were one part, or not siblings
                 why.append(f'{said(pq)}, two parts now, join in ' + ', '.join(k for k, x in zip(STYLES, v) if x))
             continue
@@ -252,7 +252,9 @@ def judge(now, was):
             why.append(f'{said(pq)} are under {APART} apart on paper now')
     else:
         # the strokes were renumbered: pairs that kept their numbers are judged above, the rest by the totals
-        t, w = totals(pairs), totals(was[1])
+        known = {**was[1], **was[2]}
+        t = totals({pq: v for pq, v in pairs.items() if pq not in known})
+        w = totals({pq: v for pq, v in was[1].items() if pq not in pairs and pq not in near})
         for i, key in enumerate(STYLES):
             if t[i] > w[i]:
                 why.append(f'{key}: pairs joined {w[i]} -> {t[i]}')
@@ -351,6 +353,8 @@ def selftest():
     check('verdict, a pair parted on paper, more ink', bool(judge((7, {P: (40, 0, 90), Q: (0, 0, 0), N: (1500, 0, 200)}, {}), was)), True)
     two = measure(('box', [(up(300), full), (up(340), full)]))
     check('verdict, two strokes of one part moved close as two parts', bool(judge(two, measure([('E', 'M300 150 L300 850'), ('E', 'M800 150 L800 850')]))), True)
+    check('verdict, two strokes of one part moved under APART as two parts', bool(judge(measure(('box', [(up(300), full), (up(320), full)])), measure([('E', 'M300 150 L300 850'), ('E', 'M800 150 L800 850')]))), True)
+    check('verdict, a near pair parted and a stroke added far off', bool(judge(measure(('box', [(up(300), full), (up(370), full), (up(900), full)])), measure(('box', [(up(300), full), (up(320), full)])))), False)
     tips = measure(('box', [([('P', 'M100 500 L488 500')], full), ([('P', 'M900 500 L512 500')], full)]))
     check('verdict, two parts whose tips were near, now side by side', bool(judge(two, tips)), True)
     check('verdict, a new form that joins', bool(judge((2, {P: (0, 8, 0)}, {}), None)), True)
