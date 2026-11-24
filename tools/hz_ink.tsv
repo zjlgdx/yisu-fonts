@@ -1,4 +1,4 @@
-# tools/hz_ink.py --accept. form (C Taiwan/shared, S mainland), character, strokes, then each pair of parts meant apart (strokes lo-hi:lo-hi, counted from 0, hi not included) = cells of ink between them in the bold yinni, huasha, louhen pens (0: they stand clear)
+# tools/hz_ink.py --accept. form (C Taiwan/shared, S mainland), character, strokes, then each pair of parts meant apart (strokes lo-hi:lo-hi, counted from 0, hi not included) = cells of ink between them in the bold yinni, huasha, louhen pens (0: they stand clear); ~ marks a pair under 25 apart on paper
 C	㗎	12	0-3:3-12=144,0,0	3-5:5-8=1861,967,2671	3-8:8-12=2117,1201,1055
 C	㤘	8	0-3:3-8=0,0,0	3-5:5-8=0,598,152
 C	㧐	7	0-3:3-7=0,0,0	3-5:5-7=602,0,0

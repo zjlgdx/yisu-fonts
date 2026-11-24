@@ -37,7 +37,9 @@ two now; a pair that closed to under APART on paper, also when it was the
 form's only one. A form redrawn with another stroke count has its strokes
 renumbered: the pairs that kept their numbers are judged as before and the
 rest by the totals per pen, so look at it. Every form is in the baseline,
-so a form new to it is a new character.
+so a form new to it is a new character. Strokes regrouped into parts the
+baseline does not have are judged as new pairs, even when the drawing got
+better: look at them and accept.
 
 It draws every form many times: about half an hour on all cores.
 """
@@ -247,14 +249,13 @@ def judge(now, was):
                 why.append(f'{said(pq)} join in {key}')
             elif v[i] > old[i] * 1.25 and v[i] - old[i] > RISE:
                 why.append(f'{said(pq)} in {key}: ink between {old[i]} -> {v[i]}')
-    if same:
-        for pq in sorted(set(was[1]) & set(near)):
-            why.append(f'{said(pq)} are under {APART} apart on paper now')
-    else:
+    for pq in sorted(set(was[1]) & set(near)):
+        why.append(f'{said(pq)} are under {APART} apart on paper now')
+    if not same:
         # the strokes were renumbered: pairs that kept their numbers are judged above, the rest by the totals
         known = {**was[1], **was[2]}
-        t = totals({pq: v for pq, v in pairs.items() if pq not in known})
-        w = totals({pq: v for pq, v in was[1].items() if pq not in pairs and pq not in near})
+        t = totals({pq: v for pq, v in {**near, **pairs}.items() if pq not in known})
+        w = totals({pq: v for pq, v in known.items() if pq not in pairs and pq not in near})
         for i, key in enumerate(STYLES):
             if t[i] > w[i]:
                 why.append(f'{key}: pairs joined {w[i]} -> {t[i]}')
@@ -347,8 +348,11 @@ def selftest():
                              ('a pair joins while a stroke is added after it', (8, {P: (0, 0, 0), Q: (40, 0, 90)}, {}), True),
                              ('two strokes that were one part, joined now', (7, {P: (40, 0, 90), Q: (0, 0, 0), ((5, 6), (6, 7)): (9, 0, 0)}, {}), True),
                              ('redrawn with a stroke more, no worse in all', (8, {((0, 3), (3, 6)): (30, 0, 80)}, {}), False),
-                             ('redrawn with a stroke more, a pen worse', (8, {((0, 3), (3, 6)): (30, 4, 80)}, {}), True)):
-        check(f'verdict, {label}', bool(judge(now, was)), want)
+                             ('redrawn with a stroke more, a pen worse', (8, {((0, 3), (3, 6)): (30, 4, 80)}, {}), True),
+                             ('a stroke added first, a clear pair now near', (8, {((3, 4), (4, 8)): (0, 0, 0)}, {((1, 3), (3, 6)): (900, 900, 900)}), True),
+                             ('a stroke added last, a joined pair now near', (8, {Q: (0, 0, 0)}, {P: (40, 0, 90)}), True),
+                             ('a stroke added, a near pair parted with less ink', (8, {P: (40, 0, 90), Q: (0, 0, 0), N: (300, 300, 300)}, {}), False)):
+        check(f'verdict, {label}', bool(judge(now, (7, {P: (40, 0, 90), Q: (0, 0, 0)}, {}) if 'redrawn' in label else was)), want)
     check('verdict, a pair parted on paper, less ink', bool(judge((7, {P: (40, 0, 90), Q: (0, 0, 0), N: (300, 0, 200)}, {}), was)), False)
     check('verdict, a pair parted on paper, more ink', bool(judge((7, {P: (40, 0, 90), Q: (0, 0, 0), N: (1500, 0, 200)}, {}), was)), True)
     two = measure(('box', [(up(300), full), (up(340), full)]))
@@ -404,7 +408,7 @@ def main():
             print(f'accepted though they join more than the baseline did ({len(worse)}): ' + ''.join(worse))
         BASE.write_text('# tools/hz_ink.py --accept. form (C Taiwan/shared, S mainland), character, strokes, then each pair of '
                         'parts meant apart (strokes lo-hi:lo-hi, counted from 0, hi not included) = cells of ink between them in the bold '
-                        + ', '.join(STYLES) + ' pens (0: they stand clear)\n'
+                        + ', '.join(STYLES) + f' pens (0: they stand clear); ~ marks a pair under {APART} apart on paper\n'
                         + ''.join(row(f, ch, n, pairs, near) + '\n' for (f, ch), (n, pairs, near) in sorted(rows.items())), encoding='utf-8')
         joined = sum(1 for _, pairs, _ in rows.values() if any(totals(pairs)[:3]))
         print(f'baseline written: {len(rows)} forms, {joined} with parts that join' + ('' if a.chars is None else f'; {len(now)} measured again'))
