@@ -41,19 +41,22 @@ import re
 #   narrow, tall   the face's width and height, against square
 #   hand    how much each stroke strays from its place, as a hand's do
 #   inked   times Yinni's ribbon is struck over it
+#   dense   the Bold pen in a form of much line: (how much narrower at most,
+#           the length of line, in ems, where it starts and where it ends)
 CUTS = {
     # 仿宋 type, after the slugs of the Chinese typewriter: rising
     # horizontals, a narrow upright face, a press where the pen lands and
     # stops, a little contrast, and a worn ribbon.
     'yinni': dict(em=1200, face=1060, pen=(0.92, 0.76), nib=(1.12, 0.70), cut='fang',
-                       rise=5.5, lean=0, narrow=0.90, tall=1.03, hand=0, inked=2),
+                       rise=5.5, lean=0, narrow=0.90, tall=1.03, hand=0, inked=2,
+                       dense=(0.16, 4.4, 7.2)),
     # A hand's 楷書 in ballpoint: pressure that comes and goes, rising
     # horizontals, the Latin's lean (less of it), each stroke a little astray.
     'huasha': dict(em=1000, face=900, pen=(1.0, 0.85), nib=(1.0, 0.93), cut='hand',
-                      rise=4.5, lean=4, narrow=1.0, tall=1.0, hand=1.0, inked=0),
+                      rise=4.5, lean=4, narrow=1.0, tall=1.0, hand=1.0, inked=0, dense=None),
     # Louhen's chisel at 35 degrees: thick and thin come from the nib.
     'louhen': dict(em=1000, face=940, pen=(0.92, 0.82), nib=None, cut='even',
-                   rise=3, lean=0, narrow=1.0, tall=1.0, hand=0.6, inked=0),
+                   rise=3, lean=0, narrow=1.0, tall=1.0, hand=0.6, inked=0, dense=(0.32, 4.0, 7.2)),
 }
 
 # ---------------------------------------------------------------- strokes
@@ -140,21 +143,68 @@ def flatten(item, box=(0, 0, 1000, 1000)):
     raise ValueError(op)
 
 
-def density_scale(ch, strokes, bold=False):
+_PATH = re.compile(r'[MLlC]|-?[\d.]+')
+
+
+def line_length(strokes):
+    """The length of a character's centre lines, in ems of its 1000 grid."""
+    total = 0.0
+    for _kind, d in strokes:
+        t, i, cmd, cur = _PATH.findall(d), 0, 'M', None
+        while i < len(t):
+            if t[i] in 'MLlC':
+                cmd = t[i]
+                i += 1
+                continue
+            n = 6 if cmd == 'C' else 2
+            v = [float(x) for x in t[i:i + n]]
+            i += n
+            if cmd == 'C':
+                p, last = [cur, v[0:2], v[2:4], v[4:6]], cur
+                for k in range(1, 9):
+                    u = k / 8
+                    w = 1 - u
+                    at = [w ** 3 * p[0][a] + 3 * w * w * u * p[1][a] + 3 * w * u * u * p[2][a] + u ** 3 * p[3][a] for a in (0, 1)]
+                    total += math.dist(last, at)
+                    last = at
+                cur = v[4:6]
+            else:
+                to = [cur[0] + v[0], cur[1] + v[1]] if cmd == 'l' else v
+                if cmd != 'M':
+                    total += math.dist(cur, to)
+                else:
+                    cmd = 'L'       # pairs after the first of an M are lines to
+                cur = to
+    return total / 1000
+
+
+def density_scale(ch, strokes, bold=False, family=None):
     """The pen's width for a Chinese character, by how many strokes it has: a
     character of a few strokes (一 十 人) a little wider, up to 6% (4% in Bold),
     so it is not faint beside its neighbours; one of many (鬱 靈 讓) a little
     narrower, down to 8% (12% in Bold), so its spaces stay open. Characters of
-    7 to 10 strokes keep the pen as it is. Kana and punctuation are left alone."""
+    7 to 10 strokes keep the pen as it is. Kana and punctuation are left alone.
+
+    A family's Bold may also narrow by how much line the form has (the cut's
+    `dense`): the narrower of the two rules is used, and a form of few
+    strokes and much line (而) keeps its share of the widening. Strokes do not say how full a form is:
+    邊 has nineteen and 5.3 ems of line, 彈 fifteen and 6.6, and it is 彈 that
+    the broad pen fills."""
     cp = ord(ch)
     if not (0x3400 <= cp <= 0x9FFF or 0xF900 <= cp <= 0xFAFF or 0x20000 <= cp <= 0x3FFFF):
         return 1.0      # CJK Unified (with Extension A and B onward) and Compatibility only
     n = len(strokes)
+    scale = 1.0
     if n <= 6:
-        return 1.0 + (0.04 if bold else 0.06) * (1.0 - ease(1, 7, n))
-    if n >= 11:
-        return 1.0 - (0.12 if bold else 0.08) * ease(10, 24, n)
-    return 1.0
+        scale = 1.0 + (0.04 if bold else 0.06) * (1.0 - ease(1, 7, n))
+    elif n >= 11:
+        scale = 1.0 - (0.12 if bold else 0.08) * ease(10, 24, n)
+    dense = CUTS[family]['dense'] if bold and family else None
+    if dense:
+        depth, lo, hi = dense
+        thin = 1.0 - depth * ease(lo, hi, line_length(strokes))
+        scale = scale * thin if n <= 6 else min(scale, thin)
+    return scale
 
 
 _START = re.compile(r'M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)')

@@ -4,6 +4,7 @@
     tools/hz_ink.py                  exit 1 when a form joins more than the baseline says
     tools/hz_ink.py --chars 辯蔑      only these (what a change touched); fails when none is drawn
     tools/hz_ink.py --accept         write the baseline (tools/hz_ink.tsv); with --chars, only their rows
+                                     (it names the forms that join more than the old baseline said)
     tools/hz_ink.py --debt 60        the forms that join most (from the baseline; measured with --chars or --batch)
     tools/hz_ink.py --where 辯蔑      which parts join, in which pen
     tools/hz_ink.py --selftest       seeded joins and clear pairs, and the verdicts; each must be told
@@ -124,20 +125,26 @@ def shared(ch, form, pairs, hanzi, build, np):
     from unittest.mock import patch
     table = (hanzi.C, hanzi.ZHS)[form]
     whole = hanzi.flatten(table[ch])
-    real = hanzi.placed
+    real, width = hanzi.placed, hanzi.density_scale
     cell = max(1, round(2 * build.S))
     out = {pq: [] for pq in pairs}
     for key in STYLES:
         st = build.STYLES[key](bold=True)
-        scale = hanzi.density_scale(ch, whole, True)
         masks = {}
 
         def mask(*rngs):
             if rngs not in masks:
+                drawn = []
+
                 def some(*a, **kw):
                     strokes, warp, r = real(*a, **kw)
+                    drawn[:] = strokes
                     return [s for lo, hi in rngs for s in strokes[lo:hi]], warp, r
-                with patch.object(hanzi, 'placed', some), patch.object(hanzi, 'density_scale', return_value=scale):
+
+                def pen(ch, _strokes, *a):
+                    # the build's own width: from the whole form as it is placed, strayed strokes and all
+                    return width(ch, drawn, *a)
+                with patch.object(hanzi, 'placed', some), patch.object(hanzi, 'density_scale', pen):
                     masks[rngs] = np.asarray(st.draw(ch, build.canvas(st, ch), form).reduce(cell)) > 64
             return masks[rngs]
         for p, q in pairs:
@@ -295,6 +302,26 @@ def selftest():
     told('two uprights 40 apart, nested', ('box', [(ups(300, 340), full), (up(800), full)]), True)
     told('two uprights 40 apart, a mainland form', ups(300, 340), True, 'S')
     assert SEED not in hanzi.C and SEED not in hanzi.ZHS
+
+    def pen(n, ems, bold, family=None, ch='\u4e00'):
+        return hanzi.density_scale(ch, [('E', f'M0 0 L{ems * 1000 / n} 0')] * n, bold, family)
+    check('pen, a path with lines after its M', round(hanzi.line_length([('E', 'M0 0 300 400 L300 1400 C300 1400 300 2400 300 2400')]), 3), 2.5)
+    check('pen, Regular takes no dense rule', pen(15, 6.6, False, 'louhen'), pen(15, 6.6, False))
+    check('pen, Bold 畫沙 takes none', pen(15, 6.6, True, 'huasha'), pen(15, 6.6, True))
+    check('pen, Bold 鏤痕 narrows with much line', pen(15, 6.6, True, 'louhen') < pen(15, 5.0, True, 'louhen') < 1, True)
+    check('pen, the narrower rule wins', pen(24, 4.1, True, 'louhen'), pen(24, 4.1, True))
+    check('pen, not Chinese: left alone', pen(15, 6.6, True, 'louhen', 'A'), 1.0)
+    check('pen, no step where the dense rule starts', abs(pen(5, 4.001, True, 'louhen') - pen(5, 4.0, True, 'louhen')) < 1e-4, True)
+    import build
+    from unittest.mock import patch
+    ch, seen = '\u5f48', []
+    if ch in hanzi.C:
+        st = build.STYLES['louhen'](bold=True)
+        true = hanzi.density_scale
+        with patch.object(hanzi, 'density_scale', lambda *a: [seen.append(v) for v in [true(*a)] if a[-1] == 'louhen'] and seen[-1] or true(*a)):
+            st.draw(ch, build.canvas(st, ch), 0)
+            work(('', [('C', ch)]))
+        check('pen, the gate draws with the build\'s width', len(set(seen)) == 1 and len(seen) > 1, True)
     left, right, wide = measure(ups(300, 340, 800)), measure(ups(300, 760, 800)), measure(ups(180, 500, 900))
     check('verdict, one pair parted and another joined', bool(judge(right, left)), True)
     check('verdict, a clear pair closed to under APART', bool(judge(measure(ups(180, 200, 900)), wide)), True)
@@ -355,6 +382,10 @@ def main():
     if a.accept:
         rows = dict(now) if a.chars is None else {**{k: v for k, v in read_base().items() if k[1] not in a.chars}, **now}
         rows = {k: v for k, v in rows.items() if v[1]}
+        was = read_base()
+        worse = [name(ch, f) for (f, ch), m in sorted(now.items()) if judge(m, was.get((f, ch)))]
+        if worse:
+            print(f'accepted though they join more than the baseline did ({len(worse)}): ' + ''.join(worse))
         BASE.write_text('# tools/hz_ink.py --accept. form (C Taiwan/shared, S mainland), character, strokes, then each pair of '
                         'parts meant apart (strokes lo-hi:lo-hi, counted from 0, hi not included) = cells of ink between them in the bold '
                         + ', '.join(STYLES) + ' pens (0: they stand clear)\n'
