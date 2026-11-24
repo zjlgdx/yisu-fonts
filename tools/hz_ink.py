@@ -30,9 +30,12 @@ the two in each pen (0 where they stand clear). Fails, against the baseline:
 a form new to the list that joins; a pair that was clear in a pen and joins
 there, whatever another pair gained (the pairs are followed by their stroke
 numbers, so one parting never pays for another joining); a pair with a
-quarter more ink in a pen (and RISE more); a pair that newly stands apart
-on paper and joins in ink; a pair that closed to under APART on paper,
-also when it was the form's only one. A form redrawn with another stroke
+quarter more ink in a pen (and RISE more); a pair that closed to under
+APART on paper, also when it was the form's only one. A pair the baseline
+does not have, in a form of the same strokes, stood under APART there and
+so was joined in every bold pen: parting it on paper is not worse, and the
+pairs that still join are listed, not failed. Every form is in the
+baseline, so a form new to it is a new character. A form redrawn with another stroke
 count has its strokes renumbered: the pairs that kept their numbers are
 judged as before and the rest by the totals per pen, so look at it. Parts
 drawn to meet are not measured here.
@@ -233,12 +236,13 @@ def judge(now, was):
     for pq, v in sorted(pairs.items()):
         old = was[1].get(pq)
         for i, key in enumerate(STYLES):
-            if v[i] and old is None:
-                if same:
-                    why.append(f'{said(pq)}, apart on paper now, join in {key}')
-            elif v[i] and not old[i]:
+            if old is None:
+                # with the same strokes, a pair missing from the baseline stood under APART
+                # on paper there, so it was joined in every bold pen: parted is not worse
+                continue
+            if v[i] and not old[i]:
                 why.append(f'{said(pq)} join in {key}')
-            elif old is not None and v[i] > old[i] * 1.25 and v[i] - old[i] > RISE:
+            elif v[i] > old[i] * 1.25 and v[i] - old[i] > RISE:
                 why.append(f'{said(pq)} in {key}: ink between {old[i]} -> {v[i]}')
     if same:
         # a pair regrouped into other parts is gone too, but is not in `near`
@@ -336,7 +340,7 @@ def selftest():
                              ('a quarter more ink in a pen', (7, {P: (40, 0, 130), Q: (0, 0, 0)}, set()), True),
                              ('a little more ink', (7, {P: (44, 0, 95), Q: (0, 0, 0)}, set()), False),
                              ('a pair joins while a stroke is added after it', (8, {P: (0, 0, 0), Q: (40, 0, 90)}, set()), True),
-                             ('a new pair that joins', (7, {P: (40, 0, 90), Q: (0, 0, 0), ((0, 2), (5, 7)): (9, 0, 0)}, set()), True),
+                             ('a pair parted on paper that still joins', (7, {P: (40, 0, 90), Q: (0, 0, 0), ((0, 2), (5, 7)): (9, 0, 0)}, set()), False),
                              ('redrawn with a stroke more, no worse in all', (8, {((0, 3), (3, 6)): (30, 0, 80)}, set()), False),
                              ('redrawn with a stroke more, a pen worse', (8, {((0, 3), (3, 6)): (30, 4, 80)}, set()), True)):
         check(f'verdict, {label}', bool(judge(now, was)), want)
@@ -381,7 +385,6 @@ def main():
         sys.exit('--chars: none of these is drawn (an empty or mangled list?)')
     if a.accept:
         rows = dict(now) if a.chars is None else {**{k: v for k, v in read_base().items() if k[1] not in a.chars}, **now}
-        rows = {k: v for k, v in rows.items() if v[1]}
         was = read_base()
         worse = [name(ch, f) for (f, ch), m in sorted(now.items()) if judge(m, was.get((f, ch)))]
         if worse:
@@ -408,6 +411,10 @@ def main():
           + (f' ({len(base)} forms in the baseline)' if a.chars is None else ''))
     if better:
         print(f'  join less than the baseline ({len(better)}): ' + ''.join(better[:80]))
+    parted = [name(ch, f) for (f, ch), (n, pairs, _) in sorted(now.items()) if (f, ch) in base and n == base[f, ch][0]
+              and any(any(v) for pq, v in pairs.items() if pq not in base[f, ch][1])]
+    if parted:
+        print(f'  parted on paper since the baseline, still joined in a bold pen ({len(parted)}): ' + ''.join(parted))
     for who, why in fails:
         print(f'FAIL {who}: {why}')
     print(f'{len(fails)} forms join more' if fails else 'no form joins more')
