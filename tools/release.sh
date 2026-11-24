@@ -18,7 +18,7 @@ MV=$(git show origin/main:build.py | sed -nE 's/^VERSION = ([0-9.]+).*/\1/p')
 import sys, glob
 from fontTools.ttLib import TTFont
 v = float(sys.argv[1])
-bad = [f for f in sorted(glob.glob('out/*.otf') + glob.glob('out/*.woff2')) if round(TTFont(f)['head'].fontRevision, 3) != v]
+bad = [f for f in sorted(glob.glob('out/*.otf') + glob.glob('out/*.woff2')) if round(TTFont(f)['head'].fontRevision, 4) != v]
 sys.exit(f'built for another version: {bad}' if bad else 0)
 EOF
 read -r COUNT PCT < <(sed -nE 's/.*The first [0-9,]+ rows are ([0-9,]+) characters across both scripts, and cover ([0-9.]+)% of the corpus.*/\1 \2/p' README.md | tr -d ,)
