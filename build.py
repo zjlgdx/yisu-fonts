@@ -93,7 +93,9 @@ OUT = HERE / 'out'
 CACHE_DIR = HERE / 'work' / 'cache'
 CODE = ('build.py', 'cells.py', 'hanzi.py', 'outline.py', 'skeleton.py', 'spacing.py')
 
-VERSION = 0.999         # head.fontRevision; nameID 5 says the same
+VERSION = 0.9991        # head.fontRevision; nameID 5 says the same
+# As written in names: three decimals, or four for a release between two (0.9991).
+VERSION_TEXT = f'{VERSION:.4f}'[:-1] if f'{VERSION:.4f}'.endswith('0') else f'{VERSION:.4f}'
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -1425,10 +1427,10 @@ def make(style, shared=None, use_cache=None):
     fb.setupNameTable({
         'familyName': family,
         'styleName': style.weight,
-        'uniqueFontIdentifier': f'{VERSION:.3f};{ps}',
+        'uniqueFontIdentifier': f'{VERSION_TEXT};{ps}',
         'fullName': f'{family} {style.weight}',
         'psName': ps,
-        'version': f'Version {VERSION:.3f}',
+        'version': f'Version {VERSION_TEXT}',
         'copyright': 'Copyright 2026 The Yisu Fonts Project Authors (https://github.com/zjlgdx/yisu-fonts)',
         'vendorURL': 'https://github.com/zjlgdx/yisu-fonts',
         'licenseDescription': 'This Font Software is licensed under the SIL Open Font License, Version 1.1.',

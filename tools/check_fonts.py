@@ -60,7 +60,7 @@ import ots
 version = float(re.search(r'^VERSION = ([0-9.]+)', (_repo.ROOT / 'build.py').read_text(), re.M).group(1))
 print('== versions', version)
 for f in otfs:
-    rev = round(TTFont(f)['head'].fontRevision, 3)
+    rev = round(TTFont(f)['head'].fontRevision, 4)
     if rev != version:
         bad.append(f'{f.name} is {rev}, not {version}')
         print(' ', f.name, rev)
