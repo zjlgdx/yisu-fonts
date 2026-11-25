@@ -256,6 +256,7 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
 - [ ] tools/hz_diff.py origin/main OUT  every changed form, before and after
 - [ ] tools/edges.py --chars "$(cat OUT.txt)"   cut: none, six fonts, both scripts' forms
 - [ ] tools/hz_ink.py --chars "$(cat OUT.txt)"   "no form joins more" in the three bold pens; it fails on an empty list
+- [ ] tools/hz_holes.py origin/main   "no part closed its openings" in the three bold pens (after a change to the pens, name forms with --chars)
 - [ ] the sheets reviewed by an agent that did not make the change
 - [ ] the whole change reviewed on another vendor's model; and the tools too,
       if a tool changed ("Having the checks reviewed", below)
@@ -273,6 +274,13 @@ and whole classes shipped: 思 on 虍's 七 in 慮 for two hundred versions, 又
   where the closest strokes are. A form that was already tight is debt
   (`--debt`): it fails only if it gets worse, so old noise cannot hide a new
   defect, which is what happened to every list before it.
+- **Openings are a gate too.** `hz_ink.py` sees ink between parts, not inside
+  one. 0.9999's first try cleared 瓊's 目 and 墮's 月 from their neighbours
+  by giving them smaller boxes, and in Louhen Bold they closed into solid
+  blocks with every other gate green. `hz_holes.py REF` draws each smallest
+  part alone, in its place and pen, and fails when an opening of 300 cells is
+  lost or a part's openings lose a third of their area. To make room, move
+  the neighbour before shrinking the part.
 - **Ink is a third gate.** `hz_gate.py` measures centre lines; two parts 40
   apart pass it and the bold pens still draw them as one mark. 0.995 and
   0.996 each had a review panel find this after the gate passed (堯's three

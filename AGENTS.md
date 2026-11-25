@@ -34,7 +34,7 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 - **One slice per pull request.** Work is split into GitHub milestones and issues; a PR closes the issues it finishes. Chinese grows by frequency, a few hundred characters per round, Traditional and Simplified together, reusing the strokes and components already drawn. Draw each in the form its own standard writes (Taiwan's 教育部 standard forms for Traditional, mainland China's 通用规范汉字表 for Simplified), and add a mainland form of a shared mark to `ZHS` when it sits differently.
 - **Keep the README true.** The character set, the rules table and the check results must match what the build gives. `README.zh-Hant.md` is the short Chinese version: what the fonts are, how to install them, the licence; `merge_round.py` keeps its count.
 - **Bump `VERSION`** in `build.py` for each release, then rebuild every font so they all carry it.
-- **A Chinese round** follows `.claude/skills/hanzi-round/SKILL.md`: draft in `work/`, `tools/hz_gate.py`, `tools/hz_inside.py`, `tools/hz_ink.py` and `tools/edges.py` before the build, `tools/check_fonts.py` after it. A change to a part already drawn is reviewed from `tools/hz_diff.py`'s before-and-after sheets by an agent that did not make it.
+- **A Chinese round** follows `.claude/skills/hanzi-round/SKILL.md`: draft in `work/`, `tools/hz_gate.py`, `tools/hz_inside.py`, `tools/hz_ink.py`, `tools/hz_holes.py` and `tools/edges.py` before the build, `tools/check_fonts.py` after it. A change to a part already drawn is reviewed from `tools/hz_diff.py`'s before-and-after sheets by an agent that did not make it.
 
 ## Before a pull request
 
