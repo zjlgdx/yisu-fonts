@@ -25,7 +25,8 @@ It checks REF out beside this tree, as hz_diff.py does, and compares the forms
 whose drawing changed (Taiwan's, and the mainland's of their own). It picks
 them by their strokes: a change to the pens or to hanzi.py changes every
 glyph and no drawing, so name the forms to measure with --chars. A form whose
-parts are no longer the same strokes (by range and kind) can't be compared
+parts are no longer the same strokes (their ranges changed, or two parts of
+one size traded places, told by their strokes' kinds) can't be compared
 part by part: it fails until it is named in --looked, once its hz_diff sheet
 has been looked at. A form new since REF is listed. When the drawing code
 (hanzi.py, skeleton.py, outline.py, build.py past its VERSION) changed since
@@ -169,6 +170,19 @@ DUMP = ('import sys, json, hashlib; sys.path.insert(0, "."); import hanzi_stroke
         'print(json.dumps({"C": {k: d(v) for k, v in h.C.items()}, "S": {k: d(v) for k, v in h.ZHS.items()}}))')
 
 
+def by_range(parts):
+    """{'4-8': (kinds, [[sizes] per pen])} from measure()'s {'4-8 PGEE': [...]}."""
+    return {key.split(' ')[0]: (key.split(' ')[1], v) for key, v in parts.items()}
+
+
+def moved(was, now):
+    """Whether the parts are no longer the same strokes: their ranges changed, or a part now has the kinds
+    another part had (two parts of one size that traded places). A stroke whose kind changed in place is
+    measured as before."""
+    return set(was) != set(now) or any(
+        now[r][0] != was[r][0] and now[r][0] in {was[q][0] for q in was if q != r} for r in now)
+
+
 DRAWING = ('hanzi.py', 'skeleton.py', 'outline.py', 'build.py')
 
 
@@ -212,7 +226,7 @@ def main():
         try:
             subprocess.run(['git', 'worktree', 'add', '-q', '--detach', str(base), a.ref], cwd=ROOT, check=True)
             was, now = forms(base), forms(ROOT)
-            unknown = [c for c in a.chars if c not in now['C'] and c not in now['S']]
+            unknown = [c for c in a.chars if not c.isspace() and c not in now['C'] and c not in now['S']]
             if unknown:
                 ap.error(f'--chars names forms this tree doesn\'t draw: {"".join(unknown)}')
             default = [k for k in now['C'] if len(k) == 1 and k in was['C'] and (was['C'][k] != now['C'][k] or k in a.chars)]
@@ -229,13 +243,14 @@ def main():
     bad, other, looked = [], [], []
     for f, ch in keys:
         k = f + ch
-        if set(old.get(k, {})) != set(now_.get(k, {})):
+        o, n = by_range(old.get(k, {})), by_range(now_.get(k, {}))
+        if moved(o, n):
             (looked if ch in a.looked else other).append(ch + ('(S)' if f == 'S' else ''))
             continue
-        for r in now_[k]:
-            for pen, x, y in worse(old[k][r], now_[k][r]):
+        for r in n:
+            for pen, x, y in worse(o[r][1], n[r][1]):
                 bad.append(k)
-                print(f'  {ch}{"(S)" if f == "S" else ""} strokes {r}, {pen} bold: openings of {BIG}+ {x[0]} -> {y[0]}, area {x[1]} -> {y[1]} cells')
+                print(f'  {ch}{"(S)" if f == "S" else ""} strokes {r} {n[r][0]}, {pen} bold: openings of {BIG}+ {x[0]} -> {y[0]}, area {x[1]} -> {y[1]} cells')
     print(f'measured {len(keys)} forms changed since {a.ref} in the three bold pens')
     if changed and not a.chars:
         print(f'FAIL the drawing code changed since {a.ref} ({", ".join(changed)}), which changes forms without '
