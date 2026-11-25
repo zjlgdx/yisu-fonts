@@ -179,8 +179,10 @@ def moved(was, now):
     """Whether the parts are no longer the same strokes: their ranges changed, or two parts changed their
     kinds and one now has the other's (two parts of one size that traded places). A stroke whose kind
     changed in place is measured as before, even when a sibling already had the new kinds (林's two 木)."""
+    if set(was) != set(now):
+        return True
     changed = {q for q in was if now[q][0] != was[q][0]}
-    return set(was) != set(now) or any(now[r][0] in {was[q][0] for q in changed - {r}} for r in changed)
+    return any(now[r][0] in {was[q][0] for q in changed - {r}} for r in changed)
 
 
 DRAWING = ('hanzi.py', 'skeleton.py', 'outline.py', 'build.py')
@@ -240,6 +242,7 @@ def main():
             if base.exists() and subprocess.run(['git', 'worktree', 'remove', '--force', str(base)], cwd=ROOT).returncode:
                 print(f'could not remove the worktree {base}: run `git worktree prune`', file=sys.stderr)
     changed = drawing_changed(a.ref)
+    named = [ch for _, ch in keys if ch in a.chars]   # forms --chars names that REF draws too
     bad, other, looked = [], [], []
     for f, ch in keys:
         k = f + ch
@@ -252,9 +255,9 @@ def main():
                 bad.append(k)
                 print(f'  {ch}{"(S)" if f == "S" else ""} strokes {r} {n[r][0]}, {pen} bold: openings of {BIG}+ {x[0]} -> {y[0]}, area {x[1]} -> {y[1]} cells')
     print(f'measured {len(keys)} forms changed since {a.ref} in the three bold pens')
-    if changed and not a.chars:
+    if changed and not named:
         print(f'FAIL the drawing code changed since {a.ref} ({", ".join(changed)}), which changes forms without '
-              'changing their strokes: name the forms it touches with --chars')
+              'changing their strokes: name forms it touches, drawn in REF too, with --chars')
     if new:
         print(f'  new since {a.ref}, nothing to compare ({len(new)}): {"".join(new)}')
     if looked:
@@ -263,7 +266,7 @@ def main():
         print(f'FAIL parts no longer the same strokes ({len(other)}): {"".join(other)}: look at their hz_diff sheets, '
               'then name them in --looked')
     print(f'{len(set(bad))} forms with a part whose openings closed or shrank' if bad else 'no part closed its openings')
-    sys.exit(1 if bad or other or (changed and not a.chars) else 0)
+    sys.exit(1 if bad or other or (changed and not named) else 0)
 
 
 if __name__ == '__main__':
