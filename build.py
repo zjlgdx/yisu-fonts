@@ -93,7 +93,7 @@ OUT = HERE / 'out'
 CACHE_DIR = HERE / 'work' / 'cache'
 CODE = ('build.py', 'cells.py', 'hanzi.py', 'outline.py', 'skeleton.py', 'spacing.py')
 
-VERSION = 0.9997        # head.fontRevision; nameID 5 says the same
+VERSION = 0.9998        # head.fontRevision; nameID 5 says the same
 # As written in names: three decimals, or four for a release between two (0.9991).
 VERSION_TEXT = f'{VERSION:.4f}'[:-1] if f'{VERSION:.4f}'.endswith('0') else f'{VERSION:.4f}'
 
