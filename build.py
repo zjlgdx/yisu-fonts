@@ -93,7 +93,7 @@ OUT = HERE / 'out'
 CACHE_DIR = HERE / 'work' / 'cache'
 CODE = ('build.py', 'cells.py', 'hanzi.py', 'outline.py', 'skeleton.py', 'spacing.py')
 
-VERSION = 0.99995       # nameID 5 and the tag; head.fontRevision holds it to 1/65536
+VERSION = 0.99996       # nameID 5 and the tag; head.fontRevision holds it to 1/65536
 # As written in names: three decimals, or more for a release between two (0.9991, 0.99991).
 # head.fontRevision is 16.16 fixed point, so past four decimals two versions can share
 # one fontRevision (0.99992 and 0.99993); the version in the names is the one that counts.
