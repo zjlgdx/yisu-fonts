@@ -176,11 +176,11 @@ def by_range(parts):
 
 
 def moved(was, now):
-    """Whether the parts are no longer the same strokes: their ranges changed, or a part now has the kinds
-    another part had (two parts of one size that traded places). A stroke whose kind changed in place is
-    measured as before."""
-    return set(was) != set(now) or any(
-        now[r][0] != was[r][0] and now[r][0] in {was[q][0] for q in was if q != r} for r in now)
+    """Whether the parts are no longer the same strokes: their ranges changed, or two parts changed their
+    kinds and one now has the other's (two parts of one size that traded places). A stroke whose kind
+    changed in place is measured as before, even when a sibling already had the new kinds (林's two 木)."""
+    changed = {q for q in was if now[q][0] != was[q][0]}
+    return set(was) != set(now) or any(now[r][0] in {was[q][0] for q in changed - {r}} for r in changed)
 
 
 DRAWING = ('hanzi.py', 'skeleton.py', 'outline.py', 'build.py')
