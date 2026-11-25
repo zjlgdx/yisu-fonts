@@ -3,7 +3,7 @@
 The checks before a pull request, on the built fonts in OUT_DIR (default out/):
 
 - all three families are there, Regular and Bold, as .otf and .woff2;
-- every font's head.fontRevision is build.py's VERSION (the fonts are fresh);
+- every font's head.fontRevision and version name are build.py's VERSION (the fonts are fresh);
 - the OpenType Sanitizer passes every .otf;
 - fontbakery check-universal, per family, has no FAIL or FATAL but the known
   ones (its full report goes to OUT_DIR/fontbakery-FAMILY.txt, one file per
@@ -57,13 +57,16 @@ if missing:
 from fontTools.ttLib import TTFont
 import ots
 
-version = float(re.search(r'^VERSION = ([0-9.]+)', (_repo.ROOT / 'build.py').read_text(), re.M).group(1))
-print('== versions', version)
+from fontTools.misc.fixedTools import floatToFixed
+import build
+print('== versions', build.VERSION_TEXT)
 for f in otfs:
-    rev = round(TTFont(f)['head'].fontRevision, 4)
-    if rev != version:
-        bad.append(f'{f.name} is {rev}, not {version}')
-        print(' ', f.name, rev)
+    font = TTFont(f)
+    rev, says = font['head'].fontRevision, font['name'].getDebugName(5)
+    # fontRevision is 16.16 fixed point: compare it as stored, and the names as written
+    if floatToFixed(rev, 16) != floatToFixed(build.VERSION, 16) or says != f'Version {build.VERSION_TEXT}':
+        bad.append(f'{f.name} is {rev} ({says}), not {build.VERSION_TEXT}')
+        print(' ', f.name, rev, says)
 
 # The names a menu shows: English, and Chinese for zh-TW, zh-HK and zh-MO
 # (Traditional) and zh-CN and zh-SG (Simplified), name IDs 1 and 4; ID 2 the

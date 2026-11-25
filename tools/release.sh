@@ -16,9 +16,20 @@ MV=$(git show origin/main:build.py | sed -nE 's/^VERSION = ([0-9.]+).*/\1/p')
 [ "$V" = "$MV" ] || { echo "main is at $MV, this checkout at $V: merge first" >&2; exit 1; }
 "$PY" - "$V" <<'EOF'
 import sys, glob
+from fontTools.misc.fixedTools import floatToFixed
 from fontTools.ttLib import TTFont
-v = float(sys.argv[1])
-bad = [f for f in sorted(glob.glob('out/*.otf') + glob.glob('out/*.woff2')) if round(TTFont(f)['head'].fontRevision, 4) != v]
+import build
+assert sys.argv[1] == build.VERSION_TEXT, f'VERSION is written {sys.argv[1]}, names say {build.VERSION_TEXT}'
+
+
+def stale(f):
+    # fontRevision is 16.16 fixed point and can't tell 0.99992 from 0.99993: the names can
+    font = TTFont(f)
+    return (floatToFixed(font['head'].fontRevision, 16) != floatToFixed(build.VERSION, 16)
+            or font['name'].getDebugName(5) != f'Version {build.VERSION_TEXT}')
+
+
+bad = [f for f in sorted(glob.glob('out/*.otf') + glob.glob('out/*.woff2')) if stale(f)]
 sys.exit(f'built for another version: {bad}' if bad else 0)
 EOF
 read -r COUNT PCT < <(sed -nE 's/.*The first [0-9,]+ rows are ([0-9,]+) characters across both scripts, and cover ([0-9.]+)% of the corpus.*/\1 \2/p' README.md | tr -d ,)

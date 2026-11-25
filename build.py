@@ -93,9 +93,11 @@ OUT = HERE / 'out'
 CACHE_DIR = HERE / 'work' / 'cache'
 CODE = ('build.py', 'cells.py', 'hanzi.py', 'outline.py', 'skeleton.py', 'spacing.py')
 
-VERSION = 0.9999        # head.fontRevision; nameID 5 says the same
-# As written in names: three decimals, or four for a release between two (0.9991).
-VERSION_TEXT = f'{VERSION:.4f}'[:-1] if f'{VERSION:.4f}'.endswith('0') else f'{VERSION:.4f}'
+VERSION = 0.9999        # nameID 5 and the tag; head.fontRevision holds it to 1/65536
+# As written in names: three decimals, or more for a release between two (0.9991, 0.99991).
+# head.fontRevision is 16.16 fixed point, so past four decimals two versions can share
+# one fontRevision (0.99992 and 0.99993); the version in the names is the one that counts.
+VERSION_TEXT = f'{VERSION:.5f}'.rstrip('0').ljust(5, '0')
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
