@@ -25,9 +25,11 @@ It checks REF out beside this tree, as hz_diff.py does, and compares the forms
 whose drawing changed (Taiwan's, and the mainland's of their own). It picks
 them by their strokes: a change to the pens or to hanzi.py changes every
 glyph and no drawing, so name the forms to measure with --chars. A form whose
-parts are no longer the same strokes can't be compared part by part: it
-fails until it is named in --looked, once its hz_diff sheet has been looked
-at. A form new since REF is listed.
+parts are no longer the same strokes (by range and kind) can't be compared
+part by part: it fails until it is named in --looked, once its hz_diff sheet
+has been looked at. A form new since REF is listed. When the drawing code
+(hanzi.py, skeleton.py, outline.py, build.py past its VERSION) changed since
+REF, it fails unless --chars names forms to measure.
 """
 import argparse
 import hashlib
@@ -110,8 +112,10 @@ def measure(keys):
         if item is None:
             continue
         here = out[f + ch] = {}
+        kinds = ''.join(k for k, _ in hanzi.flatten(item))
         for lo, hi in leaves(item):
-            row = here[f'{lo}-{hi}'] = []
+            # a part is its strokes' range and kinds: two parts of one size that trade places differ
+            row = here[f'{lo}-{hi} {kinds[lo:hi]}'] = []
             for key in STYLES:
                 st = build.STYLES[key](bold=True)
                 drawn = []
@@ -165,6 +169,20 @@ DUMP = ('import sys, json, hashlib; sys.path.insert(0, "."); import hanzi_stroke
         'print(json.dumps({"C": {k: d(v) for k, v in h.C.items()}, "S": {k: d(v) for k, v in h.ZHS.items()}}))')
 
 
+DRAWING = ('hanzi.py', 'skeleton.py', 'outline.py', 'build.py')
+
+
+def drawing_changed(ref):
+    """The files of the drawing code that changed since ref, a release's VERSION line aside."""
+    out = []
+    for f in DRAWING:
+        d = subprocess.run(['git', 'diff', ref, '--', f], cwd=ROOT, check=True, capture_output=True, text=True).stdout
+        if any(l[:1] in '+-' and not l.startswith(('+++', '---')) and not l[1:].startswith('VERSION =')
+               for l in d.splitlines()):
+            out.append(f)
+    return out
+
+
 def forms(tree):
     return json.loads(subprocess.run([sys.executable, '-c', DUMP], cwd=tree, check=True, capture_output=True, text=True).stdout)
 
@@ -194,6 +212,9 @@ def main():
         try:
             subprocess.run(['git', 'worktree', 'add', '-q', '--detach', str(base), a.ref], cwd=ROOT, check=True)
             was, now = forms(base), forms(ROOT)
+            unknown = [c for c in a.chars if c not in now['C'] and c not in now['S']]
+            if unknown:
+                ap.error(f'--chars names forms this tree doesn\'t draw: {"".join(unknown)}')
             default = [k for k in now['C'] if len(k) == 1 and k in was['C'] and (was['C'][k] != now['C'][k] or k in a.chars)]
             mainland = [k for k in now['S'] if len(k) == 1 and k in was['S'] and (was['S'][k] != now['S'][k] or k in a.chars)
                         and (now['S'][k] != now['C'].get(k) or was['S'][k] != was['C'].get(k))]
@@ -204,6 +225,7 @@ def main():
         finally:
             if base.exists() and subprocess.run(['git', 'worktree', 'remove', '--force', str(base)], cwd=ROOT).returncode:
                 print(f'could not remove the worktree {base}: run `git worktree prune`', file=sys.stderr)
+    changed = drawing_changed(a.ref)
     bad, other, looked = [], [], []
     for f, ch in keys:
         k = f + ch
@@ -215,6 +237,9 @@ def main():
                 bad.append(k)
                 print(f'  {ch}{"(S)" if f == "S" else ""} strokes {r}, {pen} bold: openings of {BIG}+ {x[0]} -> {y[0]}, area {x[1]} -> {y[1]} cells')
     print(f'measured {len(keys)} forms changed since {a.ref} in the three bold pens')
+    if changed and not a.chars:
+        print(f'FAIL the drawing code changed since {a.ref} ({", ".join(changed)}), which changes forms without '
+              'changing their strokes: name the forms it touches with --chars')
     if new:
         print(f'  new since {a.ref}, nothing to compare ({len(new)}): {"".join(new)}')
     if looked:
@@ -223,7 +248,7 @@ def main():
         print(f'FAIL parts no longer the same strokes ({len(other)}): {"".join(other)}: look at their hz_diff sheets, '
               'then name them in --looked')
     print(f'{len(set(bad))} forms with a part whose openings closed or shrank' if bad else 'no part closed its openings')
-    sys.exit(1 if bad or other else 0)
+    sys.exit(1 if bad or other or (changed and not a.chars) else 0)
 
 
 if __name__ == '__main__':
