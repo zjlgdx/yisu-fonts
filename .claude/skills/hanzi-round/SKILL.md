@@ -400,21 +400,25 @@ definitions, redraws characters nobody is looking at.
 ### Moving parts apart
 
 When `hz_ink.py --where` says two parts join, find the move with
-`tools/hz_fit.py`, not by eye. `hz_fit.py 嵐` lists the parts of a form's
-box and the ink between each two; `hz_fit.py 嵐 --pair 0,1` draws every move
+`tools/hz_fit.py`, not by eye. `hz_fit.py 寶` lists the parts of a form's
+box and the ink between each two; `hz_fit.py 崩 --pair 0,1` draws every move
 in `--steps` (the upper part giving up its bottom, the lower its top, by
-shrinking or shifting), keeps those that clear the two without another pair
-joining more, and takes the smallest that also keeps every opening
-(`hz_holes.py`'s measure) and stays off the canvas edge in all six fonts.
-`--write` puts it into `hanzi_strokes.py`. `--node 1` works inside a part's
-own box, `--axis x` on parts side by side, `S:巍` on a mainland form,
-`0,1+2` moves two parts together, and `--allow` lets a pair the next run
-will move rise in this one (寶: 宀 off 王缶, then 王缶 off 貝).
+shrinking or shifting) and keeps those that clear the two without another
+pair joining more. The smallest of those is written into a copy of
+`hanzi_strokes.py`, and every form whose drawing that changes (the
+mainland's twins, the forms built from the part) is measured against what
+it was: ink, openings (`hz_holes.py`'s measure) and the canvas edge in all
+six fonts. `--write` puts the first move that passes into
+`hanzi_strokes.py`, and says which other forms it redraws. `--node 1`
+works inside a part's own box, `--axis x` on parts side by side, `0,1+2`
+moves two parts together, and `--allow` lets a pair the next run will move
+rise in this one (寶: 宀 off 王缶, then 王缶 off 貝). It works on
+`hanzi_strokes.py` as it is, so merge a round's drafts first.
 
-It names the forms built from the box when `hanzi_strokes` was imported (凱
-holds the 豈 it was made with): the move in memory doesn't reach them, so
-measure them with `hz_ink.py --chars` after `--write`. Run the gates on the
-whole change as usual; the search is how a move is picked, not a gate.
+What it can't move: parts drawn in place on the full grid as strokes (屬's
+尸, written inline), and a part around another (匐's 勹, 豳's 山). Those are
+redrawn by hand. Run the gates on the whole change as usual; the search is
+how a move is picked, not a gate.
 
 ## 2. Check the edges, then merge
 
